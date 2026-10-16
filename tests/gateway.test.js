@@ -84,7 +84,7 @@ test('DiscordGateway usa bien la API de discord.js', async () => {
   const gw = new DiscordGateway(client, { membersIntent: true });
   assert.deepEqual(gw.listGuilds(), [{ id: '1', name: 'Servidor', icon: 'https://cdn.discordapp.com/icons/1/a.png', memberCount: 3 }]);
   const ch = gw.listChannels('1');
-  assert.equal(ch.length, 1, 'sólo canales de texto');
+  assert.equal(ch.length, 1, 'sólo canalbelongs to texto');
   assert.equal(ch[0].canPost, true);
   assert.deepEqual(gw.listRoles('1').map((r) => r.name), ['Raiders'], 'sin @everyone');
   const members = await gw.getRoleMembers('1', 'R');
@@ -96,13 +96,13 @@ test('DiscordGateway usa bien la API de discord.js', async () => {
   await gw.edit('C', 'M1', { content: 'x' });
   await gw.delete('C', 'M1');
   assert.equal(await gw.dm('10', { content: 'hola' }), true);
-  await assert.rejects(gw.send('X', { content: 'a' }), /no existe/);
+  await assert.rejects(gw.send('X', { content: 'a' }), /does not exist/);
   assert.equal(await new DiscordGateway(client, { membersIntent: false }).getRoleMembers('1', 'R'), null, 'sin intent → null (usa el plan B)');
 });
 
 test('DiscordGateway explica qué permiso falta', async () => {
   const gw = new DiscordGateway(fakeClient({ canPost: false }));
-  await assert.rejects(gw.send('C', { content: 'a' }), /faltan permisos en #tareas: Enviar mensajes, Insertar enlaces/);
+  await assert.rejects(gw.send('C', { content: 'a' }), /Missing permissions in #tareas: Send Messages, Embed Links/);
   assert.equal(gw.listChannels('1')[0].canPost, false);
 });
 
@@ -118,7 +118,7 @@ test('DiscordPublisher: si borraron el mensaje de la tarea deja de editarlo', as
   assert.equal(store.getTask(task.id).messageId, null);
   const r = await pub.sendReminder(store.getTask(task.id), [{ id: '10' }, { id: '12' }], 'both', withDefaults({}));
   assert.equal(r.dms, 2);
-  assert.ok(client.sent.some((s) => s.type === 'send' && /Recordatorio/.test(s.payload.content)));
+  assert.ok(client.sent.some((s) => s.type === 'send' && /Reminder/.test(s.payload.content)));
   db.close();
 });
 

@@ -1,6 +1,6 @@
 {
   "name": "bot-de-engage",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Bot de engagement para Discord con verificación de interacciones en X (Twitter) sin API oficial, con panel web de control.",
   "main": "src/index.js",
@@ -15,6 +15,7 @@
     "comandos": "node scripts/register-commands.js",
     "test": "node --test --test-concurrency=1 \"tests/*.test.js\"",
     "test:live": "node --test \"tests/live/*.test.js\"",
+    "test:ui": "node scripts/verify-ui.js",
     "soak": "node --expose-gc scripts/soak.js",
     "capturas": "node scripts/screenshots.js"
   },

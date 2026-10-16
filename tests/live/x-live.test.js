@@ -86,9 +86,9 @@ test('verificación real de extremo a extremo: una respuesta pública de X se co
   engine.links.adminLink({ userId: cheater.id, handleInput: 'jack', guildId: G });
   const bad = await engine.verification.verify({ task, user: cheater, inputs: { reply: `https://x.com/XDevelopers/status/${REPLY}` } });
   assert.equal(bad.results[0].state, 'rejected');
-  assert.match(bad.results[0].message, /es de @XDevelopers/);
+  assert.match(bad.results[0].message, /belongs to @XDevelopers/);
 
   // Un post que no es respuesta a la tarea
   const wrong = await engine.verification.verify({ task, user: cheater, inputs: { reply: 'https://x.com/jack/status/20' } });
-  assert.match(wrong.results[0].message, /no es una respuesta/);
+  assert.match(wrong.results[0].message, /is not a reply/);
 });

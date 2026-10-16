@@ -14,10 +14,10 @@ test('crear tarea: validaciones y publicación', async (t) => {
   const ctx = createEngine();
   t.after(() => ctx.close());
   const { tasks } = ctx.engine;
-  await assert.rejects(tasks.create({ guildId: G, tweetUrl: 'hola' }), /no es un post de X válido/);
-  await assert.rejects(tasks.create({ guildId: G, tweetUrl: 'https://x.com/a/status/123', duration: 'mucho' }), /Duración no válida/);
+  await assert.rejects(tasks.create({ guildId: G, tweetUrl: 'hola' }), /(?:Invalid X post link|not a valid X post)/);
+  await assert.rejects(tasks.create({ guildId: G, tweetUrl: 'https://x.com/a/status/123', duration: 'mucho' }), /Invalid duration/);
   // Un post que ninguna fuente conoce (el mock no lo tiene y no hay fuentes reales en las pruebas)
-  await assert.rejects(tasks.create({ guildId: G, tweetUrl: 'https://x.com/a/status/123' }), /X no respondió|No encontramos/);
+  await assert.rejects(tasks.create({ guildId: G, tweetUrl: 'https://x.com/a/status/123' }), /X is temporarily unavailable|(?:Could not find|We could not find)/);
 
   const task = await tasks.create({ guildId: G, tweetUrl: ctx.brand.url, actions: ['like', 'reply', 'nada'], duration: '2h', pointsMultiplier: 2, note: ' nota ' });
   assert.deepEqual(task.actions, ['like', 'reply']);
@@ -26,18 +26,18 @@ test('crear tarea: validaciones y publicación', async (t) => {
   assert.equal(task.endsAt - task.createdAt, 120 * 60_000);
   assert.ok(task.messageId, 'se guardó el mensaje publicado');
   assert.equal(ctx.publisher.of('postTask').length, 1);
-  await assert.rejects(tasks.create({ guildId: G, tweetUrl: ctx.brand.url }), /Ya hay una tarea activa/);
+  await assert.rejects(tasks.create({ guildId: G, tweetUrl: ctx.brand.url }), /There is already an active task/);
 
   // Sin canal configurado
   ctx.engine.updateSettings(G, { tasksChannelId: null });
   const other = ctx.mock.addTweet({ handle: 'marca', text: 'otro post' });
-  await assert.rejects(tasks.create({ guildId: G, tweetUrl: other.url }), /No hay canal de tareas/);
+  await assert.rejects(tasks.create({ guildId: G, tweetUrl: other.url }), /No task channel/);
 
   // Si Discord falla al publicar, la tarea no se queda a medias
   ctx.publisher.postTask = async () => {
     throw new Error('Missing Access');
   };
-  await assert.rejects(tasks.create({ guildId: G, tweetUrl: other.url, channelId: CH }), /No pude publicar la tarea/);
+  await assert.rejects(tasks.create({ guildId: G, tweetUrl: other.url, channelId: CH }), /Could not publish the task/);
   assert.equal(ctx.engine.store.listTasks(G).total, 1);
 });
 
@@ -47,11 +47,11 @@ test('vinculación de cuenta de X por biografía y por post', async (t) => {
   const { links } = ctx.engine;
   const u = { id: uid(), username: 'ana' };
   ctx.mock.addProfile({ handle: 'ana_x' });
-  assert.throws(() => links.start(u, G, 'no valido!'), /no es válido/);
-  await assert.rejects(links.verifyBio(u), /No tienes ninguna vinculación pendiente/);
+  assert.throws(() => links.start(u, G, 'no valido!'), /Invalid X username/);
+  await assert.rejects(links.verifyBio(u), /You have no pending link request/);
   const { code } = links.start(u, G, '@ana_x');
   assert.match(code, /^ENG-[A-Z2-9]{6}$/);
-  await assert.rejects(links.verifyBio(u), /No encontramos el código/);
+  await assert.rejects(links.verifyBio(u), /Could not find the code/);
   ctx.mock.setBio('ana_x', `mi bio ${code.toLowerCase()}`);
   const link = await links.verifyBio(u);
   assert.equal(link.verified, true);
@@ -59,16 +59,16 @@ test('vinculación de cuenta de X por biografía y por post', async (t) => {
 
   // Otra persona no puede quedarse con la misma cuenta verificada
   const intruso = { id: uid(), username: 'intruso' };
-  assert.throws(() => links.start(intruso, G, 'ana_x'), /ya está vinculada/);
+  assert.throws(() => links.start(intruso, G, 'ana_x'), /is already linked/);
 
   // Verificación por post
   const b = { id: uid(), username: 'beto' };
   ctx.mock.addProfile({ handle: 'beto_x' });
   const s = links.start(b, G, 'beto_x');
   const wrong = ctx.mock.addTweet({ handle: 'ana_x', text: s.code });
-  await assert.rejects(links.verifyTweet(b, wrong.url), /es de \*\*@ana_x\*\*/);
+  await assert.rejects(links.verifyTweet(b, wrong.url), /belongs to \*\*@ana_x\*\*/);
   const noCode = ctx.mock.addTweet({ handle: 'beto_x', text: 'hola' });
-  await assert.rejects(links.verifyTweet(b, noCode.url), /no contiene el código/);
+  await assert.rejects(links.verifyTweet(b, noCode.url), /does not contain the code/);
   const good = ctx.mock.addTweet({ handle: 'beto_x', text: `Verificando ${s.code}` });
   assert.equal((await links.verifyTweet(b, good.url)).method, 'tweet');
 
@@ -77,15 +77,15 @@ test('vinculación de cuenta de X por biografía y por post', async (t) => {
   ctx.mock.addProfile({ handle: 'caro_x' });
   links.start(c, G, 'caro_x');
   ctx.db.run('UPDATE link_requests SET expires_at = 0 WHERE user_id = ?', c.id);
-  await assert.rejects(links.verifyBio(c), /caducó/);
+  await assert.rejects(links.verifyBio(c), /expired/);
 
   // Cuenta inexistente y fuente caída
   const d = { id: uid(), username: 'dani' };
   links.start(d, G, 'dani_x');
-  await assert.rejects(links.verifyBio(d), /X no respondió|No encontramos la cuenta/);
+  await assert.rejects(links.verifyBio(d), /X is temporarily unavailable|Could not find the account/);
   ctx.mock.addProfile({ handle: 'dani_x' });
   ctx.mock.failNext = 'UNAVAILABLE';
-  await assert.rejects(links.verifyBio(d), /X no respondió/);
+  await assert.rejects(links.verifyBio(d), /X is temporarily unavailable/);
 
   assert.equal(links.unlink(u.id, { guildId: G }), true);
   assert.equal(links.get(u.id), null);
@@ -112,7 +112,7 @@ test('verificación completa: comentario comprobado, repost en el perfil, like d
   // 1 + 2 + 3 + bonus 2
   assert.equal(points(ctx, ana.id), 8);
   assert.equal(ctx.engine.store.getMember(G, ana.id).completed, 1);
-  assert.ok(ctx.engine.store.getMember(G, ana.id).trust > 50, 'sube la confianza');
+  assert.ok(ctx.engine.store.getMember(G, ana.id).trust > 50, 'sube la trust');
   // Repetir no suma dos veces
   const again = await ctx.engine.verification.verify({ task, user: ana, inputs: {} });
   assert.ok(again.results.every((r) => r.state === 'already'));
@@ -129,17 +129,18 @@ test('verificación: rechazos inteligentes del comentario', async (t) => {
   const v = (user, url) => ctx.engine.verification.verify({ task, user, inputs: { reply: url } }).then((r) => byAction(r.results).reply);
 
   assert.equal((await ctx.engine.verification.verify({ task, user: ana, inputs: {} })).results[0].state, 'missing');
-  assert.match((await v(ana, 'no es un enlace')).message, /no es un post de X válido/);
-  assert.match((await v(ana, task.tweetUrl)).message, /enlace del post de la tarea/);
+  assert.match((await v(ana, 'no es un enlace')).message, /(?:Invalid X post link|not a valid X post)/);
+  assert.match((await v(ana, task.tweetUrl)).message, /task post link/);
   const deBeto = reply(ctx, beto, task, GOOD[1]);
-  assert.match((await v(ana, deBeto.url)).message, /es de @beto_x/);
+  assert.match((await v(ana, deBeto.url)).message, /belongs to @beto_x/);
   const suelto = ctx.mock.addTweet({ handle: ana.handle, text: GOOD[1] });
-  assert.match((await v(ana, suelto.url)).message, /no es una respuesta/);
+  assert.match((await v(ana, suelto.url)).message, /is not a reply/);
   const malo = reply(ctx, ana, task, 'gm 🔥');
   const rMalo = await v(ana, malo.url);
-  assert.equal(rMalo.state, 'rejected');
-  assert.match(rMalo.message, /calidad de \d+\/100/);
-  assert.match((await v(ana, 'https://x.com/ana_x/status/999999999999999999')).message, /No encontramos|X no respondió/);
+  assert.equal(rMalo.state, 'pending');
+  assert.match(rMalo.message, /quality review/);
+  assert.equal(ctx.engine.store.userSubmissions(task.id, ana.id)[0].details.qualityReview, true);
+  assert.match((await v(ana, 'https://x.com/ana_x/status/999999999999999999')).message, /(?:Could not find|We could not find)|X is temporarily unavailable/);
 
   // Fuente caída: no se gasta intento
   const bueno = reply(ctx, ana, task, GOOD[2]);
@@ -155,11 +156,11 @@ test('verificación: rechazos inteligentes del comentario', async (t) => {
   const copia = reply(ctx, beto, task, `${GOOD[2]}!!`);
   const rCopia = await v(beto, copia.url);
   assert.equal(rCopia.state, 'rejected');
-  assert.match(rCopia.message, /casi igual al de otro miembro/);
-  assert.ok(ctx.engine.store.getMember(G, beto.id).trust < 50, 'la copia baja la confianza');
+  assert.match(rCopia.message, /almost identical to another member/);
+  assert.ok(ctx.engine.store.getMember(G, beto.id).trust < 50, 'la copia baja la trust');
 
   // Reusar el mismo post de otra persona: el autor no coincide
-  assert.match((await v(beto, bueno.url)).message, /es de @ana_x/);
+  assert.match((await v(beto, bueno.url)).message, /belongs to @ana_x/);
   assert.equal(ctx.engine.store.getMember(G, beto.id).rejected >= 2, true);
 });
 
@@ -170,7 +171,7 @@ test('verificación: límite de intentos y cuenta privada', async (t) => {
   const ana = await linkedUser(ctx, 'ana');
   for (let i = 0; i < 2; i++) await ctx.engine.verification.verify({ task, user: ana, inputs: { reply: 'malo' } });
   const r = await ctx.engine.verification.verify({ task, user: ana, inputs: { reply: reply(ctx, ana, task, GOOD[0]).url } });
-  assert.match(r.results[0].message, /Agotaste los 2 intentos/);
+  assert.match(r.results[0].message, /You have used all 2 attempts/);
   // El staff puede corregirlo a mano
   const p = ctx.engine.verification.setManual(G, task.id, ana.id, 'reply', { done: true, reviewer: { name: 'staff' } });
   assert.equal(p.complete, true);
@@ -179,7 +180,7 @@ test('verificación: límite de intentos y cuenta privada', async (t) => {
   ctx.mock.getProfileSync(priv.handle).protected = true;
   const rp = ctx.mock.addTweet({ handle: priv.handle, text: GOOD[1], replyTo: task.tweetId });
   const res = await ctx.engine.verification.verify({ task, user: priv, inputs: { reply: rp.url } });
-  assert.match(res.results[0].message, /privada/);
+  assert.match(res.results[0].message, /private/);
 });
 
 test('acceso: sin vincular, sin verificar, bloqueado o tarea cerrada', async (t) => {
@@ -187,17 +188,17 @@ test('acceso: sin vincular, sin verificar, bloqueado o tarea cerrada', async (t)
   t.after(() => ctx.close());
   const task = await ctx.engine.tasks.create({ guildId: G, tweetUrl: ctx.brand.url, actions: ['like'] });
   const v = (user) => ctx.engine.verification.verify({ task, user, inputs: {} });
-  await assert.rejects(v({ id: uid(), username: 'x' }), /Primero vincula/);
+  await assert.rejects(v({ id: uid(), username: 'x' }), /First link/);
   const sinVerificar = await linkedUser(ctx, 'sinver', { verify: false });
   ctx.engine.links.linkUnverified(sinVerificar, G, sinVerificar.handle);
-  await assert.rejects(v(sinVerificar), /sin verificar/);
+  await assert.rejects(v(sinVerificar), /unverified/);
   ctx.engine.updateSettings(G, { verification: { requireVerifiedLink: false } });
   assert.equal((await v(sinVerificar)).completedNow, true);
   const malo = await linkedUser(ctx, 'bloqueado');
   ctx.engine.store.updateMember(G, malo.id, { blacklisted: true });
-  await assert.rejects(v(malo), /No puedes participar/);
+  await assert.rejects(v(malo), /You cannot participate/);
   await ctx.engine.tasks.close(G, task.id);
-  await assert.rejects(v(await linkedUser(ctx, 'tarde')), /ya terminó/);
+  await assert.rejects(v(await linkedUser(ctx, 'tarde')), /has ended/);
 });
 
 test('modo captura: espera la captura, revisión del staff y aprobación automática por confianza', async (t) => {
@@ -215,13 +216,13 @@ test('modo captura: espera la captura, revisión del staff y aprobación automá
 
   await assert.rejects(
     ctx.engine.verification.submitProof({ task, user: ana, action: 'like', attachment: { contentType: 'text/plain', buffer: Buffer.from('hola') } }),
-    /debe ser una imagen/,
+    /must be an image/,
   );
   await assert.rejects(
     ctx.engine.verification.submitProof({ task, user: ana, action: 'like', attachment: { contentType: 'image/png', buffer: Buffer.from('no soy png de verdad') } }),
-    /no parece una imagen/,
+    /does not appear to be a valid image/,
   );
-  await assert.rejects(ctx.engine.verification.submitProof({ task, user: ana, action: 'reply', attachment: { contentType: 'image/png', buffer: sampleProofPng() } }), /sólo sirven para like o repost/);
+  await assert.rejects(ctx.engine.verification.submitProof({ task, user: ana, action: 'reply', attachment: { contentType: 'image/png', buffer: sampleProofPng() } }), /only accepted for likes or reposts/);
   const proof = await ctx.engine.verification.submitProof({ task, user: ana, action: 'like', attachment: { contentType: 'image/png', buffer: sampleProofPng() } });
   assert.equal(proof.autoApproved, false);
   assert.equal(proof.submission.status, 'pending');
@@ -237,7 +238,7 @@ test('modo captura: espera la captura, revisión del staff y aprobación automá
   const ok = ctx.engine.verification.review(G, proof.submission.id, { approve: true, reviewer: { name: 'staff' } });
   assert.equal(ok.progress.complete, true);
   assert.equal(points(ctx, ana.id), 1 + 2);
-  assert.throws(() => ctx.engine.verification.review(G, proof.submission.id, { approve: true }), /Ya estaba aprobado/);
+  assert.throws(() => ctx.engine.verification.review(G, proof.submission.id, { approve: true }), /Already approved/);
   await new Promise((r2) => setImmediate(r2));
   assert.equal(ctx.publisher.of('reviewDecided').length, 2, 'el miembro recibe el resultado');
 
@@ -246,7 +247,7 @@ test('modo captura: espera la captura, revisión del staff y aprobación automá
   ctx.engine.store.updateMember(G, vip.id, { trust: 95 });
   const rv = await ctx.engine.verification.verify({ task, user: vip, inputs: {} });
   assert.equal(rv.results[0].state, 'verified');
-  assert.match(rv.results[0].message, /confianza/);
+  assert.match(rv.results[0].message, /trust/);
 });
 
 test('modo revisión: la declaración espera al staff', async (t) => {
@@ -304,7 +305,7 @@ test('cierre: quién hizo y quién no, rachas, recomprobación y alertas antifra
   assert.equal(points(ctx, beto.id), 1 + 2, 'pierde los puntos del comentario y el bonus');
   assert.equal(ctx.publisher.of('sendReport').length, 1);
   assert.ok(ctx.publisher.of('updateTask').some((c) => c.status === 'closed'));
-  await assert.rejects(ctx.engine.tasks.close(G, task.id), /ya está cerrada/);
+  await assert.rejects(ctx.engine.tasks.close(G, task.id), /is already closed/);
   // Resumen en vivo de una tarea cerrada usa los esperados guardados
   const live = await ctx.engine.tasks.liveSummary(closed);
   assert.equal(live.expectedCount, 4);
@@ -340,7 +341,7 @@ test('cancelar, extender, recordar y eliminar (con puntos)', async (t) => {
   const rem = await ctx.engine.tasks.remind(G, task.id);
   assert.equal(rem.targets, 1);
   assert.deepEqual(ctx.publisher.of('sendReminder')[0].users, [beto.id]);
-  await assert.rejects(ctx.engine.tasks.remind(G, task.id), /hace menos de 5 minutos/);
+  await assert.rejects(ctx.engine.tasks.remind(G, task.id), /less than 5 minutes ago/);
 
   assert.equal(points(ctx, ana.id), 3);
   await ctx.engine.tasks.remove(G, task.id);
@@ -353,8 +354,8 @@ test('cancelar, extender, recordar y eliminar (con puntos)', async (t) => {
   const t2 = await ctx.engine.tasks.create({ guildId: G, tweetUrl: other.url });
   await ctx.engine.tasks.cancel(G, t2.id);
   assert.equal(ctx.engine.store.getTask(t2.id).status, 'cancelled');
-  await assert.rejects(ctx.engine.tasks.cancel(G, t2.id), /no está activa/);
-  await assert.rejects(ctx.engine.tasks.extend(G, t2.id, '1h'), /Sólo se pueden extender/);
+  await assert.rejects(ctx.engine.tasks.cancel(G, t2.id), /is not active/);
+  await assert.rejects(ctx.engine.tasks.extend(G, t2.id, '1h'), /Only active tasks can be extended/);
 });
 
 test('planificador: recordatorio automático y cierre automático', async (t) => {

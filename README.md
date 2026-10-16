@@ -4,6 +4,16 @@ Bot de *engagement* para Discord: publica tareas para apoyar posts de X (like, r
 
 ➡️ **Guía completa con imágenes:** abre [`docs/guia.html`](docs/guia.html) en el navegador (o `http://localhost:3000/guia` con el bot encendido).
 
+El bot usa comandos y mensajes en **inglés**. El panel permite elegir **Español / English** y recuerda el idioma sin perder formularios sin guardar. El acceso al panel se hace desde tu dominio de Railway; el bot no tiene comando ni botones para abrirlo.
+
+Para configurar recompensas: `/points like:2 repost:3 reply:5 quote:5 bonus:3` cambia los valores para posts futuros (sólo administradores). Para un post concreto: `/task create url:https://x.com/…/status/… reply-points:10 bonus-points:5`. Se admiten valores de 0 a 1000; los puntos individuales y `multiplier` son alternativas.
+
+Los comentarios que reciben una valoración baja, incluidos los que sólo contienen emojis, se envían a **revisión del staff**. La valoración automática no descuenta puntos, confianza ni intentos. El miembro puede presentar una versión revisada con `/verify task:1 reply:https://x.com/…/status/…`.
+
+Al actualizar una base de datos anterior, los rechazos automáticos por calidad que seguían vigentes pasan a revisión. Se revierte la penalización del último rechazo registrado en cada envío; las decisiones del staff se respetan.
+
+El estado de Server Members se consulta para la aplicación del bot conectado. Si lo activas después de arrancar, el bot reconecta automáticamente en la siguiente comprobación (cada minuto); también puedes usar **Estado del bot › Comprobar intent**. Una respuesta HTTP 429 de X pausa esa fuente respetando `Retry-After`, permite usar las otras fuentes y muestra cuándo se pueden reanudar los intentos.
+
 ## Inicio rápido (Windows)
 
 1. Instala **Node.js 24 LTS** (mínimo 22.13) desde <https://nodejs.org>.
@@ -35,8 +45,9 @@ Pasos detallados, alternativa con Railway CLI y cómo publicar la guía en GitHu
 | `npm run demo` | Modo demostración con Discord y X simulados (panel en el puerto 3100) |
 | `npm run doctor` | Diagnóstico: token, intents, servidores, acceso a X, puerto… |
 | `npm run comandos` | Fuerza el registro de los comandos de barra en Discord |
-| `npm test` | 66 pruebas automáticas (núcleo, Discord simulado, panel web, límites de Discord) |
+| `npm test` | Pruebas automáticas del núcleo, Discord, panel, intent y regresiones |
 | `npm run test:live` | Pruebas contra X real (verifica una respuesta pública real) |
+| `npm run test:ui` | Navegador real: EN/ES, formularios, scroll, eventos en vivo y diseño móvil |
 | `npm run soak` | Prueba de resistencia y fugas de memoria (miles de interacciones) |
 | `npm run capturas` | Recorrido visual automático del panel y del simulador (genera `docs/img`) |
 
@@ -44,7 +55,7 @@ Pasos detallados, alternativa con Railway CLI y cómo publicar la guía en GitHu
 
 | Acción | Cómo se comprueba | Fiabilidad |
 |---|---|---|
-| 💬 Comentario / 🗨️ Cita | Se lee el post en X: autor = cuenta vinculada, responde/cita al post correcto, calidad del texto (0-100), antiplagio, y al cerrar se comprueba que no se borró | Alta (comprobado) |
+| 💬 Comentario / 🗨️ Cita | Se comprueban autor, destino y antiplagio; la valoración de calidad es orientativa y los casos bajos van al staff. Al cerrar se comprueba que el post siga disponible | Alta (comprobado) |
 | 🔁 Repost | Se busca en el perfil público del miembro; si no aparece, se aplica el modo de prueba del servidor | Alta si aparece |
 | ❤️ Like | X hizo los likes privados en 2024: declaración, captura o revisión del staff (configurable) + auditoría del contador público del post | Media (con auditoría) |
 | 🔗 Cuenta de X | El miembro demuestra que es suya con un código temporal en su biografía o en un post | Alta |

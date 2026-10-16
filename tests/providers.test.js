@@ -88,7 +88,7 @@ test('proveedores: errores bien clasificados', async () => {
   assert.equal(await code(fxp.getTweet('2')), 'PROTECTED');
   assert.equal(await code(fxp.getTweet('3')), 'UNAVAILABLE');
   assert.equal(await code(fxp.getTweet('4')), 'UNAVAILABLE');
-  assert.equal(await code(sp.getTweet('5')), 'NOT_FOUND');
+  assert.equal(await code(sp.getTweet('5')), 'UNAVAILABLE', 'an empty response does not prove the post was deleted');
   assert.equal(await code(sp.getTweet('6')), 'PROTECTED');
   assert.equal(await code(sp.getTweet('7')), 'RATE_LIMITED');
 });

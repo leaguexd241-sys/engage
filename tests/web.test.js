@@ -121,7 +121,7 @@ test('inicio de sesión con contraseña, CSRF y límite de intentos', async () =
 test('servidores, resumen, metadatos y ajustes', async () => {
   const g = await req('/api/guilds');
   assert.equal(g.json.guilds.length, 1);
-  assert.equal(g.json.guilds[0].pendingReviews, 1);
+  assert.equal(g.json.guilds[0].pendingReviews, 2);
   const o = await req(`/api/guilds/${gid}/overview`);
   assert.equal(o.status, 200);
   assert.equal(o.json.daily.length, 14);
@@ -143,7 +143,7 @@ test('servidores, resumen, metadatos y ajustes', async () => {
   assert.ok(q.json.score < 35);
 });
 
-test('tareas: listado, detalle, CSV, operaciones y creación', async () => {
+test('tasks: listado, detalle, CSV, operaciones y creación', async () => {
   const list = await req(`/api/guilds/${gid}/tasks`);
   assert.equal(list.json.total, 2);
   assert.equal((await req(`/api/guilds/${gid}/tasks?status=closed`)).json.total, 1);
@@ -151,7 +151,7 @@ test('tareas: listado, detalle, CSV, operaciones y creación', async () => {
   const d = await req(`/api/guilds/${gid}/tasks/1`);
   assert.equal(d.json.stats.completed, 5);
   assert.equal(d.json.stats.missing, 3);
-  assert.ok(d.json.rows.find((r) => r.state === 'partial'));
+  assert.ok(d.json.rows.find((r) => r.state === 'pending'));
   assert.equal((await req(`/api/guilds/${gid}/tasks/999`)).status, 404);
   const csv = await req(`/api/guilds/${gid}/tasks/1/export.csv`);
   assert.equal(csv.headers.get('content-type'), 'text/csv; charset=utf-8');
@@ -186,8 +186,9 @@ test('tareas: listado, detalle, CSV, operaciones y creación', async () => {
 
 test('revisiones y capturas protegidas', async () => {
   const r = await req(`/api/guilds/${gid}/reviews`);
-  assert.equal(r.json.items.length, 1);
-  const item = r.json.items[0];
+  assert.equal(r.json.items.length, 2);
+  const item = r.json.items.find((s) => s.method === 'screenshot');
+  assert.ok(r.json.items.some((s) => s.details.qualityReview));
   const img = await req(item.proofUrl, { raw: true });
   assert.equal(img.status, 200);
   assert.equal(img.headers.get('content-type'), 'image/png');
@@ -197,7 +198,7 @@ test('revisiones y capturas protegidas', async () => {
   const ok = await req(`/api/guilds/${gid}/reviews/${item.id}`, { method: 'POST', body: { approve: true } });
   assert.equal(ok.json.submission.status, 'verified');
   assert.equal((await req(`/api/guilds/${gid}/reviews/${item.id}`, { method: 'POST', body: { approve: true } })).status, 400);
-  assert.equal((await req(`/api/guilds/${gid}/reviews`)).json.items.length, 0);
+  assert.equal((await req(`/api/guilds/${gid}/reviews`)).json.items.length, 1);
 });
 
 test('miembros, ranking y actividad', async () => {
@@ -259,7 +260,7 @@ test('simulador por API', async () => {
   const s = await req(`/api/sim/state?user=${app.sim.ids.users.leo}`);
   assert.equal(s.json.userId, app.sim.ids.users.leo);
   assert.ok(s.json.commands.length >= 10);
-  const r = await req('/api/sim/command', { method: 'POST', body: { userId: app.sim.ids.users.leo, name: 'perfil' } });
+  const r = await req('/api/sim/command', { method: 'POST', body: { userId: app.sim.ids.users.leo, name: 'profile' } });
   assert.equal(r.json.ok, true);
   const bio = await req('/api/sim/x', { method: 'POST', body: { userId: app.sim.ids.users.leo, type: 'bio', text: 'hola' } });
   assert.equal(bio.json.bio, 'hola');

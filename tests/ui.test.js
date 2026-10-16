@@ -77,7 +77,7 @@ test('mensaje de tarea con datos extremos respeta los límites de Discord', () =
   }
   const noMedia = bigTask({ tweet: { text: '', author: {}, media: [] }, note: null, pingRoleId: null });
   check(ui.taskMessage(noMedia, { completed: 0, participants: 0, expectedCount: null, settings }));
-  assert.equal(ui.taskMessage(noMedia, { completed: 0, participants: 0, expectedCount: 0, settings }).embeds[0].fields.at(-1).value.includes('completaron'), true);
+  assert.equal(ui.taskMessage(noMedia, { completed: 0, participants: 0, expectedCount: 0, settings }).embeds[0].fields.at(-1).value.includes('completed'), true);
 });
 
 test('informe, estado y recordatorios con miles de miembros', () => {
@@ -88,7 +88,7 @@ test('informe, estado y recordatorios con miles de miembros', () => {
     if (mentionMissing) assert.ok(p.allowedMentions.users.length <= 100);
   }
   const st = check(ui.statusMessage(task, s));
-  assert.match(JSON.stringify(st), /… y \d+ más/);
+  assert.match(JSON.stringify(st), /… and \d+ more/);
   const reminders = ui.reminderMessages(task, manyUsers(3000));
   assert.ok(reminders.length <= 5);
   for (const r of reminders) {
@@ -134,7 +134,7 @@ test('los formularios (modales) son válidos para Discord y discord.js', () => {
 test('mentionList corta a tiempo y cuenta el resto', () => {
   const out = ui.mentionList(manyUsers(500), 200);
   assert.ok(out.length <= 220);
-  assert.match(out, /… y \d+ más$/);
+  assert.match(out, /… and \d+ more$/);
   assert.equal(ui.mentionList([]), '—');
 });
 

@@ -23,7 +23,7 @@ async function main() {
   }
   const rest = new REST({ version: '10' }).setToken(token);
   const me = await rest.get(Routes.user());
-  const clientId = config.discord.clientId || me.id;
+  const clientId = me.id;
   if (process.argv.includes('borrar')) {
     if (!devGuildId) throw new Error('Define DEV_GUILD_ID para borrar los comandos de ese servidor');
     await rest.put(Routes.applicationGuildCommands(clientId, devGuildId), { body: [] });
@@ -31,8 +31,9 @@ async function main() {
     return;
   }
   const db = openDatabase(config.dbFile);
-  const r = await registerCommands({ token, clientId, devGuildId, store: new Store(db), log, force: true });
-  db.close();
+  let r;
+  try { r = await registerCommands({ token, clientId, devGuildId, store: new Store(db), log, force: true }); }
+  finally { db.close(); }
   log.info(`${r.count} comandos registrados ${devGuildId ? `en el servidor ${devGuildId} (al instante)` : 'globalmente (pueden tardar unos minutos en aparecer)'}.`);
 }
 

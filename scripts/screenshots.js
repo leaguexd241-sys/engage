@@ -186,25 +186,25 @@ async function run() {
   await asUser('Leo');
   await shot('20-simulador');
   // La tarea recién creada es la última del canal
-  await clickText('#sim-msgs .dc-btn', 'Ya lo hice');
-  await expectLast(/Primero vincula/, 'el aviso de vincular');
+  await clickText('#sim-msgs .dc-btn', 'I did it');
+  await expectLast(/Link your X account first/, 'el aviso de vincular');
   await shotMsg('21-necesita-vincular');
-  await clickText('#sim-msgs .dc-btn', 'Vincular mi cuenta');
+  await clickText('#sim-msgs .dc-btn', 'Link my account');
   await page.waitForSelector('#sim-modal-form');
   await page.type('#sim-modal-form input[name=handle]', '@leo_x');
   await shot('22-formulario-vincular', { el: '#sim-modal-form' });
   await page.click('#sim-modal-form button[type=submit]');
   await sleep(1200);
-  await expectLast(/Vincula tu cuenta de X/, 'las instrucciones de vinculación');
+  await expectLast(/Link your X account/, 'las instrucciones de vinculación');
   await shotMsg('23-instrucciones-vincular');
   const code = (await lastMsgText()).match(/ENG-[A-Z0-9]{6}/)[0];
   await page.$eval('#sim-bio', (e) => (e.value = ''));
   await page.type('#sim-bio', `Fan del proyecto · ${code}`);
   await page.click('[data-act=saveBio]');
   await sleep(900);
-  await clickText('#sim-msgs .dc-btn', 'Verificar biografía');
+  await clickText('#sim-msgs .dc-btn', 'Verify bio');
   await sleep(600);
-  await expectLast(/Cuenta de X vinculada/, 'la confirmación de vinculación');
+  await expectLast(/X account linked/, 'la confirmación de vinculación');
   await shotMsg('24-cuenta-vinculada');
 
   // Hace las acciones en X (simulado) y verifica
@@ -229,13 +229,13 @@ async function run() {
   await shot('26-formulario-verificar', { el: '#sim-modal-form' });
   await page.click('#sim-modal-form button[type=submit]');
   await sleep(1500);
-  await expectLast(/Tarea completada/, 'la tarea completada');
+  await expectLast(/Task completed/, 'the task completed');
   await shotMsg('27-tarea-completada');
 
   // Quién falta
   await page.evaluate((id) => [...document.querySelectorAll('#sim-msgs .dc-btn')].filter((x) => x.dataset.cid === `eng:status:${id}`).at(-1).click(), task.id);
   await sleep(1300);
-  await expectLast(/quién hizo y quién no/, 'el estado de la tarea');
+  await expectLast(/participation status/, 'el estado de the task');
   await shotMsg('28-quien-falta');
 
   // Hugo comenta algo sin contenido → rechazo inteligente
@@ -251,27 +251,27 @@ async function run() {
   await page.type('#sim-modal-form input[name=reply]', badUrl);
   await page.click('#sim-modal-form button[type=submit]');
   await sleep(1500);
-  await expectLast(/calidad de \d+\/100/, 'el rechazo por calidad');
+  await expectLast(/quality review/, 'la revisión de calidad sin penalización');
   await shotMsg('29-comentario-rechazado');
 
   // Staff: comando /tarea estado desde la paleta de comandos
   await asUser('Ana (Staff)');
   await page.click('#sim-input');
-  await page.type('#sim-input', '/tarea');
+  await page.type('#sim-input', '/task');
   await sleep(500);
   await shot('30-comandos', { el: '.sim-chat' });
-  await clickText('#sim-palette button', '/tarea estado', { last: false });
-  await page.waitForSelector('.modal select[name=tarea]');
-  await page.select('.modal select[name=tarea]', String(task.id));
+  await clickText('#sim-palette button', '/task status', { last: false });
+  await page.waitForSelector('.modal select[name=task]');
+  await page.select('.modal select[name=task]', String(task.id));
   await page.click('.modal button[type=submit]');
   await sleep(1500);
-  await expectLast(/quién hizo y quién no/, 'el estado por comando');
+  await expectLast(/participation status/, 'el estado por comando');
 
   // Revisión de la captura en el canal del staff
   await clickText('.sim-channels button', 'staff-logs', { last: false });
   await sleep(900);
   await shotMsg('31-revision-discord');
-  await clickText('#sim-msgs .dc-btn', 'Aprobar');
+  await clickText('#sim-msgs .dc-btn', 'Approve');
   await sleep(1200);
   await shotMsg('32-revision-aprobada');
 
@@ -286,20 +286,20 @@ async function run() {
     const box = document.querySelector('#sim-msgs');
     box.scrollTop = box.scrollHeight;
   });
-  await expectLast(/Resultado final/, 'el informe final');
+  await expectLast(/Final report/, 'el informe final');
   await shotMsg('33-informe-final');
   await shot('34-simulador-completo');
 
   // Perfil y ranking
   await asUser('Leo');
   await page.click('#sim-input');
-  await page.type('#sim-input', '/perfil');
+  await page.type('#sim-input', '/profile');
   await sleep(300);
-  await clickText('#sim-palette button', '/perfil', { last: false });
+  await clickText('#sim-palette button', '/profile', { last: false });
   await page.waitForSelector('.modal');
   await page.click('.modal button[type=submit]');
   await sleep(1200);
-  await expectLast(/Perfil de engagement/, 'el perfil');
+  await expectLast(/Engagement profile/, 'el perfil');
   await shotMsg('35-perfil');
 
   // ── 4. Tema claro y móvil ───────────────────────────
@@ -316,7 +316,8 @@ async function run() {
 
   await browser.close();
   await app.stop();
-  fs.rmSync(dataDir, { recursive: true, force: true });
+  const resolved = path.resolve(dataDir);
+  if (resolved.startsWith(path.resolve(os.tmpdir()) + path.sep) && path.basename(resolved).startsWith('engage-shots-')) fs.rmSync(resolved, { recursive: true, force: true });
 
   console.log(`\n${n} capturas guardadas en docs/img/`);
   if (problems.length) {

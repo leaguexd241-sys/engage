@@ -73,7 +73,7 @@ async function main() {
   const t0 = Date.now();
   for (let round = 1; round <= ROUNDS; round++) {
     const post = mock.addTweet({ handle: 'marca_demo', text: `Anuncio número ${round}: nueva función para toda la comunidad, ¿qué os parece?` });
-    await run(sim.command({ userId: staff, channelId: sim.ids.tareas, name: 'tarea', subcommand: 'crear', options: { enlace: post.url, duracion: '1h' } }));
+    await run(sim.command({ userId: staff, channelId: sim.ids.tareas, name: 'task', subcommand: 'create', options: { url: post.url, duration: '1h' } }));
     const task = engine.store.activeTasks(g)[0];
     const taskMsg = sim.gateway.messages.get(sim.ids.tareas).filter((m) => !m.ephemeralFor).at(-1);
     for (const [i, u] of users.entries()) {
@@ -85,11 +85,11 @@ async function main() {
       if (sim.pendingModals.has(u.id)) await run(sim.modal({ userId: u.id, fields: { reply: r.url } }));
       if (i % 5 === 0) await run(sim.button({ userId: u.id, messageId: taskMsg.id, customId: `eng:progress:${task.id}` }));
       if (i % 10 === 0) await run(sim.button({ userId: u.id, messageId: taskMsg.id, customId: `eng:status:${task.id}` }));
-      if (i % 25 === 0) await run(sim.autocomplete({ userId: u.id, name: 'verificar', focused: { name: 'tarea', value: '' } }));
+      if (i % 25 === 0) await run(sim.autocomplete({ userId: u.id, name: 'verify', focused: { name: 'task', value: '' } }));
       sim.gateway.clearEphemerals(u.id);
     }
     await engine.tasks.flushDirty();
-    await run(sim.command({ userId: staff, channelId: sim.ids.general, name: 'tarea', subcommand: 'cerrar', options: { tarea: String(task.id) } }));
+    await run(sim.command({ userId: staff, channelId: sim.ids.general, name: 'task', subcommand: 'close', options: { task: String(task.id) } }));
     await run(sim.command({ userId: staff, channelId: sim.ids.general, name: 'ranking' }));
     sim.gateway.clearEphemerals(staff);
     x.prune();
