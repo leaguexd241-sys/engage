@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Guía del Bot de Engage</title>
+    <link rel="icon" href="logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="guia.css" />
+    <script src="guia.js"></script>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="toc">
+        <a class="brand" href="#inicio">
+          <img src="logo.svg" alt="" width="36" height="36" />
+          <div><strong>Bot de Engage</strong><span>Guía de uso e instalación</span></div>
+        </a>
+        <button class="menu-toggle" id="menu-toggle" type="button">☰ Índice</button>
+        <nav>
+          <div class="grp">Empezar</div>
+          <a href="#que-es">1. Qué es y qué hace</a>
+          <a href="#sin-api">2. Cómo funciona sin la API de X</a>
+          <a href="#requisitos">3. Requisitos</a>
+          <a href="#portal">4. Crear el bot en Discord</a>
+          <a href="#instalacion">5. Instalación</a>
+          <a href="#configuracion">6. Configuración (.env)</a>
+          <a href="#primeros-pasos">7. Primeros pasos en tu servidor</a>
+          <div class="grp">Uso</div>
+          <a href="#miembros">8. Guía para los miembros</a>
+          <a href="#staff">9. Guía para el staff</a>
+          <a href="#panel">10. El panel web</a>
+          <a href="#comandos">11. Todos los comandos</a>
+          <a href="#inteligencia">12. Verificación inteligente y antifraude</a>
+          <div class="grp">Avanzado</div>
+          <a href="#demo">13. Modo demo y simulador</a>
+          <a href="#24-7">14. Subirlo a Internet (Railway) y 24/7</a>
+          <a href="#pruebas">15. Pruebas y calidad</a>
+          <a href="#problemas">16. Solución de problemas</a>
+          <a href="#seguridad">17. Seguridad y límites</a>
+        </nav>
+        <button class="theme-btn" id="theme-btn" type="button">🌓 Cambiar tema claro/oscuro</button>
+      </aside>
+
+      <main>
+        <header class="hero" id="inicio">
+          <img src="logo.svg" alt="" width="56" height="56" />
+          <h1>Bot de Engage para Discord</h1>
+          <p>Publica tareas para apoyar posts de X (like, repost, comentario y cita). Tus miembros las hacen <strong>de verdad en su propia cuenta de X</strong> y el bot <strong>comprueba quién las hizo y quién no</strong>, sin la API oficial de X. Todo se controla desde un panel web profesional.</p>
+          <div class="cta">
+            <a class="btn primary" href="#instalacion">⚡ Instalar en 10 minutos</a>
+            <a class="btn" href="#demo">🧪 Probarlo sin Discord</a>
+            <a class="btn" href="#comandos">📋 Ver comandos</a>
+          </div>
+        </header>
+
+        <!-- 1 -->
+        <section id="que-es">
+          <h2><span class="num">1.</span>Qué es y qué hace</h2>
+          <p class="lead">Un bot de “raids” o tareas de engagement completo, con verificación real y un panel para gestionarlo.</p>
+          <div class="grid g3">
+            <div class="card"><span class="ico">🚀</span><h4>Tareas en Discord</h4><p>Pegas el enlace de un post de X y el bot publica una tarjeta con botones que abren el like, repost, comentario o cita <em>reales</em> en X.</p></div>
+            <div class="card"><span class="ico">✅</span><h4>Verificación real</h4><p>Lee X para comprobar comentarios, citas y reposts. Detecta cuentas ajenas, comentarios vacíos, copias y comentarios borrados.</p></div>
+            <div class="card"><span class="ico">👥</span><h4>Quién hizo y quién no</h4><p>Botón “Quién falta”, recordatorios automáticos a los que faltan e informe final con completaron / incompletas / no participaron.</p></div>
+            <div class="card"><span class="ico">🧠</span><h4>Inteligente</h4><p>Puntúa la calidad de cada comentario (0-100), mide la confianza de cada miembro y compara lo declarado con los contadores públicos del post.</p></div>
+            <div class="card"><span class="ico">🏆</span><h4>Puntos y ranking</h4><p>Puntos por acción, bonus por completar, rachas, ranking semanal/mensual y perfil de cada miembro.</p></div>
+            <div class="card"><span class="ico">🖥️</span><h4>Panel web</h4><p>Resumen con gráficos, tareas, revisión de capturas, miembros, actividad en vivo, ajustes y estado del bot. Tema claro y oscuro, funciona en el móvil.</p></div>
+          </div>
+          <figure><img src="img/02-resumen.png" alt="Panel web: resumen del servidor" loading="lazy" /><figcaption>El panel web: resumen del servidor con actividad diaria, cómo se verificó cada acción, tareas activas y ranking.</figcaption></figure>
+        </section>
+
+        <!-- 2 -->
+        <section id="sin-api">
+          <h2><span class="num">2.</span>Cómo funciona sin la API de X</h2>
+          <p class="lead">La API oficial de X es de pago y muy limitada. Este bot no la necesita: las acciones las hace cada miembro con su cuenta y el bot las comprueba leyendo datos públicos.</p>
+          <div class="flow">
+            <div class="box"><b>1 · El staff crea la tarea</b>Pega el enlace del post (comando <code>/tarea crear</code> o el panel).</div>
+            <div class="arrow">→</div>
+            <div class="box"><b>2 · El miembro actúa en X</b>Los botones abren el like/repost/comentario oficiales de X en su cuenta.</div>
+            <div class="arrow">→</div>
+            <div class="box"><b>3 · Pulsa “✅ Ya lo hice”</b>Si comentó, pega el enlace de su comentario.</div>
+            <div class="arrow">→</div>
+            <div class="box"><b>4 · El bot comprueba</b>Lee X: autor, destino, calidad, copias, repost en su perfil…</div>
+            <div class="arrow">→</div>
+            <div class="box"><b>5 · Informe</b>Puntos al momento y, al terminar, quién hizo y quién no.</div>
+          </div>
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th>Acción</th><th>Cómo se comprueba</th><th>Fiabilidad</th></tr></thead>
+              <tbody>
+                <tr><td>💬 Comentario</td><td>Se lee el comentario en X: debe ser de la cuenta vinculada del miembro, responder al post de la tarea, superar la calidad mínima y no ser una copia. Al cerrar la tarea se vuelve a comprobar que no se borró.</td><td><span class="badge ok">Comprobado</span></td></tr>
+                <tr><td>🗨️ Cita</td><td>Igual que el comentario, pero el post debe citar al de la tarea.</td><td><span class="badge ok">Comprobado</span></td></tr>
+                <tr><td>🔁 Repost</td><td>Se busca en el perfil público del miembro. Si aparece, queda comprobado; si X no lo muestra (a veces lo oculta o limita), se aplica el modo de prueba del servidor.</td><td><span class="badge ok">Comprobado</span> / <span class="badge warn">según modo</span></td></tr>
+                <tr><td>❤️ Like</td><td>Desde junio de 2024 X hizo los likes <strong>privados</strong>: nadie (salvo el autor) puede ver quién dio like, con o sin API. Por eso se usa el modo del servidor: <em>declaración</em>, <em>captura</em> o <em>revisión del staff</em>, más una auditoría automática que compara los likes declarados con el contador público del post.</td><td><span class="badge warn">Según modo + auditoría</span></td></tr>
+                <tr><td>🔗 Cuenta de X</td><td>Para que nadie use la cuenta de otro, cada miembro demuestra que es suya poniendo un código temporal (<code>ENG-XXXXXX</code>) en su biografía o publicándolo en un post.</td><td><span class="badge ok">Comprobado</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note info"><span>ℹ️</span><p><strong>Fuentes de datos:</strong> el bot lee X a través de <code>api.fxtwitter.com</code> y del endpoint público que X usa para sus <em>embeds</em> (<code>cdn.syndication.twimg.com</code>). Si una falla usa la otra, guarda en caché lo que lee y, si X pide esperar, deja descansar esa fuente unos minutos automáticamente. No usa tu cuenta de X ni contraseñas.</p></div>
+        </section>
+
+        <!-- 3 -->
+        <section id="requisitos">
+          <h2><span class="num">3.</span>Requisitos</h2>
+          <ul>
+            <li><strong>Node.js 24 LTS</strong> (mínimo 22.13) — <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a>. No hace falta instalar ninguna base de datos: usa SQLite, que ya viene con Node.</li>
+            <li>Un PC con Windows, macOS o Linux (o un VPS) con conexión a Internet. Consume poco: ~25 MB de memoria de JavaScript en la prueba de resistencia.</li>
+            <li>Una aplicación de bot en el <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">portal de desarrolladores de Discord</a> (gratis, siguiente paso).</li>
+            <li>Permiso de <strong>Gestionar servidor</strong> en el servidor donde lo vayas a añadir.</li>
+          </ul>
+        </section>
+
+        <!-- 4 -->
+        <section id="portal">
+          <h2><span class="num">4.</span>Crear el bot en Discord</h2>
+          <p class="lead">Sólo se hace una vez. Entra en <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">discord.com/developers/applications</a> con tu cuenta de Discord.</p>
+          <ol class="steps">
+            <li><strong>Crea la aplicación</strong>Pulsa <kbd>New Application</kbd>, ponle un nombre (por ejemplo “Engage”) y acepta. En <em>General Information</em> copia el <strong>Application ID</strong>: es tu <code>DISCORD_CLIENT_ID</code>.</li>
+            <li><strong>Obtén el token del bot</strong>Ve a la pestaña <em>Bot</em> y pulsa <kbd>Reset Token</kbd>. Copia el token (sólo se muestra una vez): es tu <code>DISCORD_TOKEN</code>. <strong>No lo compartas nunca</strong>: quien lo tenga controla el bot.</li>
+            <li><strong>Activa el intent de miembros (muy recomendado)</strong>En la misma pestaña <em>Bot</em>, en <em>Privileged Gateway Intents</em>, activa <strong>SERVER MEMBERS INTENT</strong> y guarda. Así el bot puede listar a los miembros de un rol y decir exactamente quién no hizo la tarea. Sin él funciona igual, pero “quién falta” se calcula con los miembros que vincularon su X.</li>
+            <li><strong>Invita el bot a tu servidor</strong>La forma más fácil: arranca el bot (paso 5) y en el panel ve a <em>Estado del bot › Invitar a un servidor</em>. O en el portal: <em>OAuth2 › URL Generator</em>, marca <code>bot</code> y <code>applications.commands</code> y los permisos: Ver canales, Enviar mensajes, Insertar enlaces, Adjuntar archivos, Leer el historial, Mencionar a todos (para mencionar roles) y Usar emojis externos. El bot <strong>no</strong> necesita permisos de administrador.</li>
+            <li><strong>(Opcional) Inicio de sesión con Discord en el panel</strong>Si quieres que tus moderadores entren al panel con su cuenta de Discord (y vean sólo los servidores que administran): en <em>OAuth2</em> copia el <strong>Client Secret</strong> (<code>DISCORD_CLIENT_SECRET</code>) y en <em>Redirects</em> añade <code>http://localhost:3000/auth/discord/callback</code> (o tu dominio).</li>
+          </ol>
+        </section>
+
+        <!-- 5 -->
+        <section id="instalacion">
+          <h2><span class="num">5.</span>Instalación</h2>
+          <h3>Windows (con doble clic)</h3>
+          <ol class="steps">
+            <li><strong>Instala Node.js</strong>Descarga la versión LTS de <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a> e instálala con las opciones por defecto.</li>
+            <li><strong>Ejecuta <code>instalar.bat</code></strong>Instala las dependencias, crea el archivo <code>.env</code> y lo abre en el Bloc de notas.</li>
+            <li><strong>Pega tu token</strong>En <code>.env</code> rellena <code>DISCORD_TOKEN=</code> y <code>DISCORD_CLIENT_ID=</code> y guarda.</li>
+            <li><strong>Ejecuta <code>iniciar.bat</code></strong>Arranca el bot y el panel. Si ocurriera un error inesperado, se reinicia solo a los 10 segundos.</li>
+            <li><strong>Abre el panel</strong>Entra en <a href="http://localhost:3000" target="_blank" rel="noopener">http://localhost:3000</a>. La contraseña se genera sola la primera vez y queda guardada en <code>data/admin-password.txt</code> (o pon la tuya en <code>DASHBOARD_PASSWORD</code>).</li>
+          </ol>
+          <h3>Con la terminal (cualquier sistema)</h3>
+          <pre><code>cd "bot de engage"
+npm install
+cp .env.example .env      # en Windows: copy .env.example .env
+# edita .env y pega DISCORD_TOKEN y DISCORD_CLIENT_ID
+npm run doctor            # comprueba que todo está bien
+npm start                 # arranca el bot y el panel</code></pre>
+          <div class="note ok"><span>🩺</span><p><strong><code>npm run doctor</code></strong> revisa la versión de Node, el token, el intent de miembros, en qué servidores está el bot, que se puede leer X y que el puerto del panel está libre, y te dice exactamente qué corregir.</p></div>
+          <p>Al arrancar verás algo así en la consola:</p>
+          <pre><code>[2026-09-26 18:30:02] INFO  [bot] Bot de engage v1.0.0 · Node v24.18.0
+[2026-09-26 18:30:04] INFO  [discord] Conectado como Engage#1234 en 2 servidor(es).
+[2026-09-26 18:30:04] INFO  [bot] Panel web: http://127.0.0.1:3000
+[2026-09-26 18:30:05] INFO  [discord] Registrados 12 comandos (global).</code></pre>
+          <div class="note info"><span>⏱️</span><p>Los comandos globales pueden tardar unos minutos en aparecer en Discord la primera vez. Para que aparezcan al instante en tu servidor de pruebas, pon su ID en <code>DEV_GUILD_ID</code>.</p></div>
+        </section>
+
+        <!-- 6 -->
+        <section id="configuracion">
+          <h2><span class="num">6.</span>Configuración (<code>.env</code>)</h2>
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th>Variable</th><th>Para qué sirve</th><th>Ejemplo</th></tr></thead>
+              <tbody>
+                <tr><td><code>DISCORD_TOKEN</code></td><td><strong>Obligatorio.</strong> Token del bot.</td><td><code>MTIz…</code></td></tr>
+                <tr><td><code>DISCORD_CLIENT_ID</code></td><td>ID de la aplicación (para el enlace de invitación y los comandos).</td><td><code>123456789012345678</code></td></tr>
+                <tr><td><code>DEV_GUILD_ID</code></td><td>Registra los comandos sólo en ese servidor, al instante.</td><td>vacío</td></tr>
+                <tr><td><code>OWNER_IDS</code></td><td>IDs de Discord con acceso total (panel y comandos).</td><td><code>111,222</code></td></tr>
+                <tr><td><code>DASHBOARD_PORT</code></td><td>Puerto del panel web.</td><td><code>3000</code></td></tr>
+                <tr><td><code>DASHBOARD_HOST</code></td><td><code>127.0.0.1</code> = sólo este PC; <code>0.0.0.0</code> = accesible desde la red.</td><td><code>127.0.0.1</code></td></tr>
+                <tr><td><code>PUBLIC_URL</code></td><td>Dirección con la que entras al panel (necesaria para el inicio de sesión con Discord).</td><td><code>https://panel.midominio.com</code></td></tr>
+                <tr><td><code>DASHBOARD_PASSWORD</code></td><td>Contraseña del panel. Vacía = se genera y se guarda en <code>data/admin-password.txt</code>.</td><td></td></tr>
+                <tr><td><code>DISCORD_CLIENT_SECRET</code></td><td>Activa “Entrar con Discord” en el panel.</td><td></td></tr>
+                <tr><td><code>DATA_DIR</code></td><td>Carpeta de datos (base de datos, capturas, registros).</td><td><code>./data</code></td></tr>
+                <tr><td><code>LOG_LEVEL</code></td><td>Detalle del registro: <code>debug</code>, <code>info</code>, <code>warn</code>, <code>error</code>.</td><td><code>info</code></td></tr>
+                <tr><td><code>X_PROVIDERS</code></td><td>Fuentes de X en orden de preferencia.</td><td><code>fxtwitter,syndication</code></td></tr>
+                <tr><td><code>TRUST_PROXY</code></td><td><code>true</code> si el panel está detrás de nginx, Caddy o Cloudflare.</td><td><code>false</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Todo lo demás (canales, roles, puntos, modo de verificación, recordatorios…) se configura <strong>por servidor</strong> desde el panel (<em>Ajustes</em>) o con <code>/config</code>, sin reiniciar.</p>
+        </section>
+
+        <!-- 7 -->
+        <section id="primeros-pasos">
+          <h2><span class="num">7.</span>Primeros pasos en tu servidor</h2>
+          <ol class="steps">
+            <li><strong>Canal de tareas</strong><code>/config canal canal:#tareas</code> — donde se publicarán las tareas.</li>
+            <li><strong>Rol de participantes</strong><code>/config rol-participantes rol:@Raiders</code> — quién <em>debe</em> hacer las tareas. Con esto el bot sabe exactamente quién falta.</li>
+            <li><strong>Canal del staff</strong><code>/config logs canal:#staff-logs</code> — privado para moderadores: aquí llegan las capturas a revisar con botones de Aprobar/Rechazar.</li>
+            <li><strong>Modo de verificación de likes/reposts</strong><code>/config verificacion modo:…</code> — <em>Declaración</em> (rápido), <em>Captura obligatoria</em> o <em>Revisión manual</em>. Se explica en la sección 12.</li>
+            <li><strong>Publica tu primera tarea</strong><code>/tarea crear enlace:https://x.com/…/status/…</code> o desde el panel con vista previa.</li>
+          </ol>
+          <div class="note info"><span>💡</span><p>Pide a tus miembros que usen <code>/vincular usuario:@sucuenta</code> una vez. Sin cuenta vinculada no se puede comprobar que el comentario es suyo.</p></div>
+        </section>
+
+        <!-- 8 -->
+        <section id="miembros">
+          <h2><span class="num">8.</span>Guía para los miembros</h2>
+          <p class="lead">Lo que ve y hace un miembro, paso a paso. (Imágenes reales del bot, tomadas en el simulador.)</p>
+          <h3>1 · Vincular la cuenta de X (una sola vez)</h3>
+          <p>Si pulsa <strong>✅ Ya lo hice</strong> sin haber vinculado su cuenta, el bot se lo pide con un botón:</p>
+          <div class="shots">
+            <figure class="msg"><img src="img/21-necesita-vincular.png" alt="Aviso para vincular la cuenta" loading="lazy" /><figcaption>Aviso privado (sólo lo ve él).</figcaption></figure>
+            <figure class="msg"><img src="img/22-formulario-vincular.png" alt="Formulario para escribir el usuario de X" loading="lazy" /><figcaption>Escribe su usuario de X.</figcaption></figure>
+          </div>
+          <p>El bot le da un código temporal. Lo pega en su biografía de X, pulsa <strong>🔎 Verificar biografía</strong> y listo (después puede quitarlo). También puede publicarlo en un post y verificar con el enlace.</p>
+          <div class="shots">
+            <figure class="msg"><img src="img/23-instrucciones-vincular.png" alt="Instrucciones con el código de verificación" loading="lazy" /><figcaption>Instrucciones con el código (caduca en 30 minutos).</figcaption></figure>
+            <figure class="msg"><img src="img/24-cuenta-vinculada.png" alt="Cuenta vinculada" loading="lazy" /><figcaption>Cuenta vinculada: vale para todos los servidores del bot.</figcaption></figure>
+          </div>
+          <h3>2 · Hacer la tarea</h3>
+          <p>La tarea tiene botones que abren X directamente: <strong>❤️ Like</strong>, <strong>🔁 Repostear</strong>, <strong>💬 Comentar</strong> y <strong>🗨️ Citar</strong>. El miembro hace cada acción en su cuenta de X y vuelve a Discord.</p>
+          <h3>3 · Pulsar “✅ Ya lo hice”</h3>
+          <p>Si la tarea pide comentario, el bot abre un formulario para pegar el enlace del comentario (en X: abrir su respuesta › Compartir › Copiar enlace).</p>
+          <div class="shots">
+            <figure class="msg"><img src="img/26-formulario-verificar.png" alt="Formulario para pegar el enlace del comentario" loading="lazy" /><figcaption>Pega el enlace de su comentario.</figcaption></figure>
+            <figure class="msg"><img src="img/27-tarea-completada.png" alt="Tarea completada" loading="lazy" /><figcaption>Resultado: cada acción con cómo se comprobó y los puntos ganados.</figcaption></figure>
+          </div>
+          <p>Si algo no es válido, el bot explica por qué y ofrece <strong>Reintentar</strong>. Por ejemplo, un comentario vacío de contenido:</p>
+          <figure class="msg"><img src="img/29-comentario-rechazado.png" alt="Comentario rechazado por baja calidad" loading="lazy" /><figcaption>“top 🔥🔥🔥” se rechaza: calidad 0/100. Like y repost sí cuentan.</figcaption></figure>
+          <h3>4 · Ver quién falta, su progreso y su perfil</h3>
+          <div class="shots">
+            <figure class="msg"><img src="img/28-quien-falta.png" alt="Quién hizo la tarea y quién no" loading="lazy" /><figcaption>Botón <strong>👥 Quién falta</strong>: quién completó y quién no.</figcaption></figure>
+            <figure class="msg"><img src="img/35-perfil.png" alt="Perfil del miembro" loading="lazy" /><figcaption><code>/perfil</code>: puntos, puesto, confianza y racha.</figcaption></figure>
+          </div>
+          <h3>5 · Si el servidor pide captura</h3>
+          <p>En modo <em>Captura obligatoria</em>, tras pulsar “Ya lo hice” el bot pide una captura del like/repost: <code>/prueba tarea:12 accion:like imagen:(adjuntar)</code>. Si el miembro tiene confianza alta, se aprueba sola; si no, la revisa el staff y el miembro recibe el resultado por mensaje directo.</p>
+        </section>
+
+        <!-- 9 -->
+        <section id="staff">
+          <h2><span class="num">9.</span>Guía para el staff</h2>
+          <h3>Crear tareas</h3>
+          <p>Con <code>/tarea crear enlace:… [like] [repost] [comentario] [cita] [duracion] [multiplicador] [canal] [participantes] [mencionar] [nota]</code> o desde el panel (<em>Nueva tarea</em>), que muestra el post y una vista previa exacta del mensaje de Discord antes de publicarlo.</p>
+          <figure><img src="img/14-nueva-tarea.png" alt="Crear una tarea desde el panel con vista previa" loading="lazy" /><figcaption>Nueva tarea en el panel: post cargado de X, acciones, duración, canal, rol, puntos y vista previa en vivo.</figcaption></figure>
+          <h3>Revisar capturas y declaraciones</h3>
+          <p>Llegan al canal de registro con botones <strong>Aprobar</strong> / <strong>Rechazar</strong> (el rechazo pide un motivo, que el miembro recibe por MD), y también a la página <em>Revisión</em> del panel.</p>
+          <div class="shots">
+            <figure class="msg"><img src="img/31-revision-discord.png" alt="Revisión pendiente en el canal del staff" loading="lazy" /><figcaption>Revisión pendiente en #staff-logs.</figcaption></figure>
+            <figure class="msg"><img src="img/32-revision-aprobada.png" alt="Revisión aprobada" loading="lazy" /><figcaption>Tras aprobar: se suman los puntos y se avisa al miembro.</figcaption></figure>
+          </div>
+          <h3>Durante y al final de la tarea</h3>
+          <ul>
+            <li><strong>Recordatorio automático</strong> antes del final (15 min por defecto) a quien falta: en el canal, por MD o ambos. También manual con <code>/tarea recordar</code>.</li>
+            <li><strong>Cierre automático</strong> al terminar el tiempo: recomprueba los comentarios (anula los borrados), revisa los contadores públicos, actualiza rachas y publica el informe.</li>
+            <li><code>/tarea extender</code>, <code>/tarea cerrar</code> (cierra ya con informe) y <code>/tarea cancelar</code> (sin informe).</li>
+          </ul>
+          <figure class="msg"><img src="img/33-informe-final.png" alt="Informe final de la tarea" loading="lazy" /><figcaption>Informe final: participación, acciones verificadas, calidad media y la lista de quién completó, quién la dejó a medias y quién no participó.</figcaption></figure>
+          <h3>Gestionar miembros</h3>
+          <p><code>/miembro puntos</code> (sumar o restar con motivo), <code>/miembro bloquear</code> / <code>desbloquear</code> (no puede participar ni cuenta como “falta”), <code>/miembro vincular</code> (vinculación manual verificada por el staff) y <code>/miembro desvincular</code>.</p>
+        </section>
+
+        <!-- 10 -->
+        <section id="panel">
+          <h2><span class="num">10.</span>El panel web</h2>
+          <p class="lead">Se abre en <code>http://localhost:3000</code> (o tu <code>PUBLIC_URL</code>). Entra con la contraseña o con Discord. Si tienes varios servidores, cámbialos con el selector de la barra lateral. Todo se actualiza en vivo.</p>
+          <div class="shots">
+            <figure><img src="img/01-login.png" alt="Inicio de sesión del panel" loading="lazy" /><figcaption><strong>Acceso</strong>: contraseña (y “Entrar con Discord” si lo activas).</figcaption></figure>
+            <figure><img src="img/03-tareas.png" alt="Listado de tareas" loading="lazy" /><figcaption><strong>Tareas</strong>: filtros, búsqueda, progreso, revisiones pendientes y alertas.</figcaption></figure>
+            <figure><img src="img/05-tarea-activa.png" alt="Detalle de una tarea activa" loading="lazy" /><figcaption><strong>Detalle de tarea</strong>: post, métricas (+variación), acciones (recordar, extender, cerrar, CSV…).</figcaption></figure>
+            <figure><img src="img/04-tarea-cerrada.png" alt="Participantes de una tarea finalizada" loading="lazy" /><figcaption><strong>Participantes</strong>: quién hizo cada acción, su comentario y calidad, alertas antifraude.</figcaption></figure>
+            <figure><img src="img/06-detalle-accion.png" alt="Detalle de una acción de un miembro" loading="lazy" /><figcaption>Cada celda se puede abrir para ver la prueba y corregirla (marcar hecho / no hecho).</figcaption></figure>
+            <figure><img src="img/07-revision.png" alt="Cola de revisión" loading="lazy" /><figcaption><strong>Revisión</strong>: capturas pendientes con aprobar/rechazar (o aprobar todas).</figcaption></figure>
+            <figure><img src="img/08-miembros.png" alt="Listado de miembros" loading="lazy" /><figcaption><strong>Miembros</strong>: cuenta de X, puntos, confianza, completadas, rachas.</figcaption></figure>
+            <figure><img src="img/09-miembro.png" alt="Ficha de un miembro" loading="lazy" /><figcaption><strong>Ficha</strong>: ajustar puntos y confianza, vincular X, bloquear, notas privadas.</figcaption></figure>
+            <figure><img src="img/10-ranking.png" alt="Ranking" loading="lazy" /><figcaption><strong>Ranking</strong>: siempre, 30 o 7 días.</figcaption></figure>
+            <figure><img src="img/11-actividad.png" alt="Registro de actividad" loading="lazy" /><figcaption><strong>Actividad</strong>: todo lo que pasa, en vivo, con filtros.</figcaption></figure>
+            <figure><img src="img/13-estado.png" alt="Estado del bot" loading="lazy" /><figcaption><strong>Estado</strong>: conexión, memoria, salud de las fuentes de X y registro.</figcaption></figure>
+            <figure><img src="img/40-resumen-claro.png" alt="Panel en tema claro" loading="lazy" /><figcaption>Tema claro (se elige con el botón ☀️/🌙 de arriba).</figcaption></figure>
+          </div>
+          <h3>Ajustes del servidor</h3>
+          <figure><img src="img/12-ajustes.png" alt="Ajustes del servidor" loading="lazy" /><figcaption>Canales y roles, valores por defecto, verificación (con un probador del analizador de calidad), recordatorios e informes.</figcaption></figure>
+          <h3>En el móvil</h3>
+          <div class="shots">
+            <figure><img src="img/41-movil.png" alt="Panel en el móvil" loading="lazy" style="max-width:320px" /></figure>
+            <figure><img src="img/42-movil-menu.png" alt="Menú del panel en el móvil" loading="lazy" style="max-width:320px" /></figure>
+          </div>
+        </section>
+
+        <!-- 11 -->
+        <section id="comandos">
+          <h2><span class="num">11.</span>Todos los comandos</h2>
+          <h3>👤 Para todos los miembros</h3>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Comando</th><th>Qué hace</th></tr></thead>
+            <tbody>
+              <tr><td><code>/vincular usuario:@tuusuario</code></td><td>Vincula y verifica tu cuenta de X (con el código en la biografía o en un post).</td></tr>
+              <tr><td><code>/desvincular</code></td><td>Quita tu cuenta de X.</td></tr>
+              <tr><td><code>/tareas</code></td><td>Tareas activas; marca con ✅ las que ya completaste.</td></tr>
+              <tr><td><code>/verificar [tarea] [comentario] [cita]</code></td><td>Igual que el botón ✅. Si sólo tienes una tarea pendiente no hace falta indicarla; puedes pasar el enlace del comentario directamente.</td></tr>
+              <tr><td><code>/prueba tarea accion imagen</code></td><td>Sube una captura como prueba de like o repost.</td></tr>
+              <tr><td><code>/perfil [miembro]</code></td><td>Puntos, puesto, confianza, racha, completadas y rechazos.</td></tr>
+              <tr><td><code>/ranking [periodo]</code></td><td>Top 10 de siempre, 30 días o 7 días.</td></tr>
+              <tr><td><code>/ayuda</code></td><td>Cómo funciona y lista de comandos.</td></tr>
+            </tbody>
+          </table></div>
+          <h3>🛡️ Staff (permiso “Gestionar servidor” o rol de staff)</h3>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Comando</th><th>Qué hace</th></tr></thead>
+            <tbody>
+              <tr><td><code>/tarea crear enlace [like] [repost] [comentario] [cita] [duracion] [multiplicador] [canal] [participantes] [mencionar] [nota]</code></td><td>Publica una tarea. Si no marcas acciones, usa las de por defecto. Duración: <code>30m</code>, <code>2h</code>, <code>1d</code>, <code>1h30m</code>…</td></tr>
+              <tr><td><code>/tarea estado tarea</code></td><td>Quién hizo y quién no.</td></tr>
+              <tr><td><code>/tarea recordar tarea</code></td><td>Menciona a quien falta (máximo uno cada 5 min).</td></tr>
+              <tr><td><code>/tarea extender tarea tiempo</code></td><td>Amplía el tiempo.</td></tr>
+              <tr><td><code>/tarea cerrar tarea</code></td><td>Cierra ya y publica el informe final.</td></tr>
+              <tr><td><code>/tarea cancelar tarea</code></td><td>Detiene la tarea sin informe (los puntos ganados se mantienen).</td></tr>
+              <tr><td><code>/miembro puntos usuario cantidad [motivo]</code></td><td>Suma o resta puntos.</td></tr>
+              <tr><td><code>/miembro bloquear|desbloquear usuario</code></td><td>Impide o permite participar.</td></tr>
+              <tr><td><code>/miembro vincular usuario cuenta</code> · <code>/miembro desvincular usuario</code></td><td>Vinculación manual de la cuenta de X.</td></tr>
+              <tr><td><code>/panel</code></td><td>Enlace al panel web.</td></tr>
+            </tbody>
+          </table></div>
+          <h3>⚙️ Configuración (permiso “Gestionar servidor”)</h3>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Comando</th><th>Qué hace</th></tr></thead>
+            <tbody>
+              <tr><td><code>/config ver</code></td><td>Muestra toda la configuración.</td></tr>
+              <tr><td><code>/config canal canal</code></td><td>Canal de tareas por defecto.</td></tr>
+              <tr><td><code>/config logs [canal]</code></td><td>Canal de registro y revisiones (vacío = desactivar).</td></tr>
+              <tr><td><code>/config rol-participantes [rol]</code></td><td>Rol que debe hacer las tareas.</td></tr>
+              <tr><td><code>/config rol-staff [rol]</code></td><td>Rol que puede gestionar tareas.</td></tr>
+              <tr><td><code>/config rol-mencion [rol]</code></td><td>Rol que se menciona al publicar.</td></tr>
+              <tr><td><code>/config verificacion modo</code></td><td>Declaración, captura obligatoria o revisión manual.</td></tr>
+              <tr><td><code>/config calidad minimo</code></td><td>Calidad mínima de los comentarios (0-100, recomendado 35).</td></tr>
+              <tr><td><code>/config recordatorios activar [minutos] [modo]</code></td><td>Recordatorios automáticos (canal, MD o ambos).</td></tr>
+              <tr><td><code>/config puntos [like] [repost] [comentario] [cita] [bonus]</code></td><td>Puntos por acción y bonus por completar.</td></tr>
+              <tr><td><code>/config duracion tiempo</code></td><td>Duración por defecto de las tareas.</td></tr>
+            </tbody>
+          </table></div>
+          <figure><img src="img/30-comandos.png" alt="Comandos del bot en Discord" loading="lazy" /><figcaption>Los comandos aparecen al escribir <code>/</code> en Discord (aquí, en el simulador).</figcaption></figure>
+          <div class="note info"><span>🔒</span><p><code>/config</code> sólo lo ven quienes tienen “Gestionar servidor”. Si quieres ocultar también <code>/tarea</code> y <code>/miembro</code> a los miembros, ve en Discord a <em>Ajustes del servidor › Integraciones › (tu bot)</em> y limita esos comandos a tu rol de staff.</p></div>
+        </section>
+
+        <!-- 12 -->
+        <section id="inteligencia">
+          <h2><span class="num">12.</span>Verificación inteligente y antifraude</h2>
+          <h3>Calidad de los comentarios (0-100)</h3>
+          <p>Cada comentario se puntúa según su longitud, variedad de palabras, relación con el texto del post, estructura y uso de emojis, y se penaliza si es genérico (“gm”, “buen post”, “🔥🔥”), repetitivo, todo en mayúsculas o spam/autopromoción. Por debajo del mínimo (35 por defecto) se rechaza y se explica por qué. Puedes probarlo en <em>Ajustes › Prueba el analizador de calidad</em>.</p>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Comentario</th><th>Calidad</th><th>Resultado</th></tr></thead>
+            <tbody>
+              <tr><td>🔥🔥🔥</td><td>3</td><td><span class="badge warn">Rechazado</span></td></tr>
+              <tr><td>gm · Buen post · nice post bro</td><td>0-11</td><td><span class="badge warn">Rechazado</span></td></tr>
+              <tr><td>follow back bro check my bio</td><td>≤15</td><td><span class="badge warn">Rechazado (spam)</span></td></tr>
+              <tr><td>Qué buena noticia para la ciencia</td><td>~66</td><td><span class="badge ok">Aceptado</span></td></tr>
+              <tr><td>El próximo vuelo de Starship desde Starbase puede ser histórico, ojalá todo salga bien 🚀</td><td>~96</td><td><span class="badge ok">Excelente</span></td></tr>
+            </tbody>
+          </table></div>
+          <h3>Otras defensas</h3>
+          <ul>
+            <li><strong>Propiedad de la cuenta:</strong> código temporal en la biografía o en un post; una cuenta de X verificada sólo puede pertenecer a un miembro.</li>
+            <li><strong>Autor y destino:</strong> el comentario debe ser de la cuenta vinculada y responder (o citar) al post de la tarea.</li>
+            <li><strong>Antiplagio:</strong> compara el comentario con los de los demás miembros en la tarea y con los anteriores del propio miembro (similitud configurable, 80% por defecto).</li>
+            <li><strong>Un post, una prueba:</strong> el mismo comentario no se puede usar dos veces.</li>
+            <li><strong>Recomprobación al cerrar:</strong> si alguien borra su comentario antes del final, se le anulan esa acción y sus puntos.</li>
+            <li><strong>Auditoría de contadores:</strong> si 30 miembros declaran like pero el contador público del post sólo subió 8, la tarea muestra una alerta.</li>
+            <li><strong>Confianza (0-100):</strong> sube con acciones comprobadas y baja con rechazos, copias o borrados. Niveles 🔴 Riesgo, 🟡 Normal, 🟢 Confiable y 💎 Élite. Con confianza alta, las capturas y declaraciones se aprueban solas (umbral configurable).</li>
+            <li><strong>Límites anti-spam:</strong> enfriamientos por usuario, máximo de intentos por acción y bloqueo de dobles envíos simultáneos.</li>
+          </ul>
+          <h3>Modos de verificación de likes y reposts</h3>
+          <div class="grid g3">
+            <div class="card"><h4>⚡ Declaración</h4><p>Cuenta al pulsar “Ya lo hice”. El más rápido. Se vigila con la auditoría de contadores. Recomendado para comunidades de confianza.</p></div>
+            <div class="card"><h4>📸 Captura</h4><p>Hay que subir una captura con <code>/prueba</code>. Se aprueba sola con confianza alta; si no, la revisa el staff.</p></div>
+            <div class="card"><h4>🛡️ Revisión</h4><p>Cada declaración espera a que el staff la apruebe. El más estricto.</p></div>
+          </div>
+          <p>En los tres modos, el repost se comprueba primero en el perfil público: si aparece, cuenta como comprobado sin más trámites.</p>
+        </section>
+
+        <!-- 13 -->
+        <section id="demo">
+          <h2><span class="num">13.</span>Modo demo y simulador</h2>
+          <p class="lead">Pruébalo todo sin Discord y sin tocar X: <code>npm run demo</code> (o doble clic en <code>demo.bat</code>) y abre <a href="http://localhost:3100" target="_blank" rel="noopener">http://localhost:3100</a> con la contraseña <code>demo</code>.</p>
+          <p>Crea un servidor de Discord simulado (“Comunidad Demo”) con canales, roles, 9 miembros con cuentas de X simuladas y tareas de ejemplo. En la página <strong>Simulador</strong> puedes actuar como cualquier miembro, usar los comandos con <code>/</code>, pulsar botones, rellenar formularios y hacer like/repost/comentarios en el “X simulado”. Todo pasa por <strong>el mismo código</strong> que el bot real, con las mismas reglas de Discord (límites de mensajes, 3 segundos para responder, formularios…).</p>
+          <figure><img src="img/20-simulador.png" alt="Simulador de Discord" loading="lazy" /><figcaption>El simulador: canales a la izquierda, chat en el centro y, a la derecha, a quién interpretar y su cuenta de X simulada.</figcaption></figure>
+          <figure><img src="img/25-x-simulado.png" alt="Panel del X simulado" loading="lazy" style="max-width:340px" /><figcaption>X simulado: editar la biografía (para el código), dar like, repostear, comentar o citar, y “adelantar el tiempo” para ver recordatorios y cierres.</figcaption></figure>
+          <div class="note warn"><span>⚠️</span><p>La demo empieza siempre desde cero y usa su propia carpeta (<code>data-demo</code>). No afecta a tus datos reales.</p></div>
+        </section>
+
+        <!-- 14 -->
+        <section id="24-7">
+          <h2><span class="num">14.</span>Subirlo a Internet (Railway) y 24/7</h2>
+          <p class="lead">Para que funcione aunque apagues tu PC, súbelo a un servidor. Lo más sencillo es <strong>Railway</strong>. El bot detecta Railway solo: usa su puerto, su dominio HTTPS, su proxy y el volumen para los datos.</p>
+          <div class="note warn"><span>⚠️</span><p><strong>GitHub Pages no puede ejecutar el bot:</strong> sólo publica páginas estáticas (sirve para esta guía, ver más abajo). El bot necesita un servidor Node encendido todo el tiempo, como Railway, un VPS o tu PC.</p></div>
+
+          <h3>Paso 1 · Sube el código a GitHub (privado)</h3>
+          <p>Crea un repositorio <strong>privado</strong> vacío en <a href="https://github.com/new" target="_blank" rel="noopener">github.com/new</a> (por ejemplo <code>bot-de-engage</code>) y, en la carpeta del bot:</p>
+          <pre><code>git init
+git add .
+git commit -m "Bot de engage"
+git branch -M main
+git remote add origin https://github.com/TU_USUARIO/bot-de-engage.git
+git push -u origin main</code></pre>
+          <div class="note ok"><span>🔒</span><p>El archivo <code>.gitignore</code> ya excluye <code>.env</code>, <code>data/</code> y <code>node_modules/</code>: tu token <strong>nunca</strong> se sube a GitHub. Si alguna vez subes un token por error, genera uno nuevo en el portal de Discord (<em>Bot › Reset Token</em>).</p></div>
+
+          <h3>Paso 2 · Crea el proyecto en Railway</h3>
+          <ol class="steps">
+            <li><strong>Nuevo proyecto</strong>En <a href="https://railway.com" target="_blank" rel="noopener">railway.com</a>: <kbd>New Project</kbd> › <kbd>Deploy from GitHub repo</kbd> › elige <code>bot-de-engage</code> (autoriza a Railway a leer tus repositorios si lo pide). El archivo <code>railway.json</code> ya indica cómo arrancarlo y el <code>.nvmrc</code> fija Node 24.</li>
+            <li><strong>Variables</strong>En el servicio, pestaña <em>Variables</em>, añade: <code>DISCORD_TOKEN</code>, <code>DISCORD_CLIENT_ID</code> y <code>DASHBOARD_PASSWORD</code> (tu contraseña del panel). Opcionales: <code>OWNER_IDS</code> y <code>DISCORD_CLIENT_SECRET</code>. <strong>No</strong> pongas <code>PORT</code>, <code>DASHBOARD_HOST</code> ni <code>PUBLIC_URL</code>: se configuran solos.</li>
+            <li><strong>Volumen para los datos (importante)</strong>En el lienzo del proyecto: clic derecho › <kbd>New Volume</kbd> (o <kbd>+ Create</kbd> › <kbd>Volume</kbd>), conéctalo al servicio del bot con la ruta de montaje <code>/data</code>. Sin volumen, la base de datos (tareas, puntos, cuentas vinculadas) se borraría en cada despliegue; el bot avisa en el registro si falta.</li>
+            <li><strong>Dominio del panel</strong>En <em>Settings › Networking</em> pulsa <kbd>Generate Domain</kbd>. Obtendrás algo como <code>https://bot-de-engage-production.up.railway.app</code>: ese es tu panel (y la guía estará en <code>/guia</code>).</li>
+            <li><strong>Inicio de sesión con Discord (si lo usas)</strong>En el portal de Discord › <em>OAuth2 › Redirects</em>, añade <code>https://TU-DOMINIO.up.railway.app/auth/discord/callback</code>.</li>
+            <li><strong>Comprueba el registro</strong>Pestaña <em>Deployments › View logs</em>: debe aparecer <code>Conectado como TuBot#1234</code> y <code>Registrados 12 comandos</code>. Si no pusiste <code>DASHBOARD_PASSWORD</code>, ahí verás la contraseña generada.</li>
+          </ol>
+          <div class="note info"><span>ℹ️</span><p><strong>Una sola réplica:</strong> deja el servicio con 1 instancia (es lo predeterminado); el bot usa una base de datos SQLite y una sola conexión con Discord. Cada <code>git push</code> a <code>main</code> vuelve a desplegar el bot automáticamente, sin perder datos gracias al volumen. Railway es de pago por uso (tiene prueba gratuita); este bot consume muy pocos recursos. Consulta sus precios actuales en su web.</p></div>
+          <details><summary>Alternativa sin GitHub: subirlo con la terminal (Railway CLI)</summary>
+            <pre><code>npm install -g @railway/cli
+railway login
+railway init        # crea el proyecto
+railway up          # sube la carpeta actual y despliega</code></pre>
+            <p>Después añade las variables, el volumen en <code>/data</code> y el dominio desde la web de Railway como en los pasos 2-4. Para volver a subir cambios: <code>railway up</code>.</p>
+          </details>
+
+          <h3>La guía en GitHub Pages (opcional)</h3>
+          <p>Con el bot en Railway la guía ya está en <code>https://TU-DOMINIO/guia</code>. Si además quieres publicarla aparte: en tu repositorio de GitHub ve a <em>Settings › Pages</em>, en <em>Source</em> elige <kbd>Deploy from a branch</kbd>, rama <code>main</code> y carpeta <code>/docs</code>, y guarda. En un par de minutos estará en <code>https://TU_USUARIO.github.io/bot-de-engage/</code>. Ojo: GitHub Pages desde un repositorio privado requiere un plan de pago de GitHub; con uno público es gratis (el token no está en el repositorio, pero todo el código sí sería visible).</p>
+
+          <h3>En tu PC con Windows</h3>
+          <p><code>iniciar.bat</code> reinicia el bot automáticamente si se detiene por un error. Para que arranque al encender el PC: pulsa <kbd>Win</kbd>+<kbd>R</kbd>, escribe <code>shell:startup</code> y pon ahí un acceso directo a <code>iniciar.bat</code>.</p>
+          <h3>Con PM2 (Windows, Linux o macOS)</h3>
+          <pre><code>npm install -g pm2
+pm2 start src/index.js --name engage
+pm2 save
+pm2 startup      # sigue las instrucciones para arrancar con el sistema
+pm2 logs engage  # ver el registro</code></pre>
+          <h3>En un VPS Linux con systemd</h3>
+          <pre><code>[Unit]
+Description=Bot de Engage
+After=network-online.target
+
+[Service]
+WorkingDirectory=/opt/engage
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+User=engage
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+          <h3>Abrir el panel a Internet con HTTPS</h3>
+          <p>Deja <code>DASHBOARD_HOST=127.0.0.1</code> y pon delante un proxy con HTTPS. Con Caddy basta esto (el certificado es automático); luego pon <code>PUBLIC_URL=https://panel.midominio.com</code> y <code>TRUST_PROXY=true</code>:</p>
+          <pre><code>panel.midominio.com {
+    reverse_proxy 127.0.0.1:3000
+}</code></pre>
+          <h3>Copias de seguridad</h3>
+          <p>Todo está en la carpeta <code>data/</code>: <code>engage.db</code> (base de datos), <code>proofs/</code> (capturas, se guardan 45 días) y <code>logs/</code>. Copia esa carpeta con el bot apagado para una copia completa.</p>
+        </section>
+
+        <!-- 15 -->
+        <section id="pruebas">
+          <h2><span class="num">15.</span>Pruebas y calidad</h2>
+          <p class="lead">El proyecto incluye pruebas automáticas que puedes ejecutar tú mismo.</p>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Comando</th><th>Qué comprueba</th><th>Resultado</th></tr></thead>
+            <tbody>
+              <tr><td><code>npm test</code></td><td>66 pruebas: utilidades, análisis de enlaces, calidad y antiplagio, proveedores de X con respuestas reales guardadas, el motor completo (vinculación, cada tipo de verificación, puntos, cierre, recordatorios, antifraude), <strong>todos los comandos, botones y formularios</strong> en el Discord simulado, límites de mensajes de Discord con datos extremos, el adaptador de discord.js y el panel web (seguridad, CSRF, permisos, cada endpoint, eventos en vivo, OAuth2).</td><td><span class="badge ok">66/66</span></td></tr>
+              <tr><td><code>npm run test:live</code></td><td>Contra X real: lee posts y perfiles y <strong>verifica de extremo a extremo una respuesta pública real</strong>, rechazando los intentos de usarla desde otra cuenta.</td><td><span class="badge ok">OK</span></td></tr>
+              <tr><td><code>npm run soak</code></td><td>Miles de interacciones seguidas (13 320 en la prueba) midiendo la memoria tras cada ronda.</td><td><span class="badge ok">Sin fugas</span> ~23,5 MB estables</td></tr>
+              <tr><td><code>npm run capturas</code></td><td>Recorrido visual con un navegador real: usa el panel y el simulador como una persona (clics, formularios, comandos) y falla ante cualquier error de consola. Genera las imágenes de esta guía.</td><td><span class="badge ok">0 errores</span></td></tr>
+            </tbody>
+          </table></div>
+          <div class="note info"><span>🧱</span><p>Para no gastar memoria: cachés con tamaño máximo y caducidad, sin mensajes guardados en memoria, colas limitadas, oyentes que se eliminan al cerrar cada conexión del panel y temporizadores que no se solapan.</p></div>
+        </section>
+
+        <!-- 16 -->
+        <section id="problemas">
+          <h2><span class="num">16.</span>Solución de problemas</h2>
+          <details><summary>No aparecen los comandos en Discord</summary><p>Los comandos globales pueden tardar unos minutos la primera vez. Pon el ID de tu servidor en <code>DEV_GUILD_ID</code> y reinicia para que aparezcan al instante, o ejecuta <code>npm run comandos</code>. Comprueba que invitaste el bot con el permiso <code>applications.commands</code>.</p></details>
+          <details><summary>“El token de Discord no es válido”</summary><p>Genera uno nuevo en el portal (<em>Bot › Reset Token</em>), pégalo en <code>.env</code> sin espacios ni comillas y reinicia.</p></details>
+          <details><summary>“No pude publicar la tarea en el canal…”</summary><p>El bot necesita en ese canal: Ver canal, Enviar mensajes e Insertar enlaces. El mensaje de error dice exactamente cuál falta. En el panel, los canales sin permisos aparecen como “(sin permisos)”.</p></details>
+          <details><summary>“No encontramos el código en tu biografía”</summary><p>Guarda la biografía en X y espera 1-2 minutos: las fuentes públicas de X pueden tardar en mostrar el cambio. Alternativa: “Publicar el código” en un post y “Verificar con post”.</p></details>
+          <details><summary>“X no respondió a tiempo”</summary><p>Una fuente de X estaba lenta o pidió esperar. El intento <strong>no se gasta</strong>: vuelve a pulsar ✅ en un minuto. Revisa <em>Estado del bot › Fuentes de X</em>. <code>npm run doctor</code> comprueba si tu red bloquea <code>api.fxtwitter.com</code> o <code>cdn.syndication.twimg.com</code>.</p></details>
+          <details><summary>El informe dice “miembros con X vinculada” en vez del rol</summary><p>Falta el intent <em>SERVER MEMBERS INTENT</em> (paso 4.3) o la tarea no tiene rol de participantes. Actívalo en el portal y reinicia; el panel muestra un aviso mientras falte.</p></details>
+          <details><summary>El puerto 3000 está ocupado</summary><p>Cambia <code>DASHBOARD_PORT</code> en <code>.env</code> (y <code>PUBLIC_URL</code> para que coincida).</p></details>
+          <details><summary>Olvidé la contraseña del panel</summary><p>Mírala en <code>data/admin-password.txt</code> o define una nueva en <code>DASHBOARD_PASSWORD</code> y reinicia. En <em>Estado del bot</em> puedes cerrar todas las sesiones abiertas.</p></details>
+          <details><summary>El repost no aparece como “comprobado”</summary><p>X no siempre muestra los reposts recientes en el perfil público, o limita esa consulta. Entonces se aplica el modo de verificación del servidor (declaración, captura o revisión). No es un error.</p></details>
+        </section>
+
+        <!-- 17 -->
+        <section id="seguridad">
+          <h2><span class="num">17.</span>Seguridad y límites</h2>
+          <ul>
+            <li>El bot <strong>nunca</strong> pide ni usa contraseñas de X: cada miembro actúa con su propia cuenta a través de los enlaces oficiales de X (<em>intents</em>).</li>
+            <li>El panel usa sesiones firmadas (HttpOnly, SameSite), protección CSRF, límite de intentos de contraseña, cabeceras de seguridad (CSP, anti-iframe) y permisos por servidor.</li>
+            <li>Los datos son tuyos y están en tu equipo (<code>data/</code>). Las capturas se borran solas a los 45 días y el registro de actividad a los 90.</li>
+            <li><strong>Límite honesto:</strong> los likes de X son privados desde 2024, así que ninguna herramienta (ni con API) puede comprobar quién dio like a un post ajeno. El bot lo compensa con capturas/revisión, confianza y la auditoría de contadores.</li>
+            <li>Las fuentes públicas de X pueden cambiar o limitar el acceso en el futuro. El bot usa varias con respaldo automático y se puede ampliar con otras en <code>src/twitter/providers/</code>.</li>
+            <li>Usa las tareas con responsabilidad y respeta las normas de X sobre manipulación de la plataforma: pide interacciones genuinas (el analizador de calidad ayuda a que los comentarios aporten algo).</li>
+          </ul>
+          <p class="foot">Bot de Engage · v1.0.0 · Guía incluida en <code>docs/guia.html</code>. Con el bot encendido también está en <code>/guia</code> del panel.</p>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

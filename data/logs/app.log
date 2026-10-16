@@ -1,0 +1,6 @@
+[2026-09-26 20:06:58] INFO  [bot] Bot de engage v1.0.0 · Node v24.18.0
+[2026-09-26 20:06:58] WARN  [bot] No hay DISCORD_TOKEN: el panel web funciona, pero el bot está desconectado. Para probar sin Discord usa: npm run demo
+[2026-09-26 20:06:58] INFO  [bot] Panel web: http://127.0.0.1:3000 (público: http://localhost:3000)
+[2026-09-26 20:06:58] INFO  [bot] Contraseña del panel guardada en: C:\Users\pc\Pictures\bot de engage\data\admin-password.txt (generada ahora)
+[2026-09-26 20:08:25] WARN  [auth] Intento de acceso fallido al panel desde 127.0.0.1
+[2026-09-26 20:08:46] INFO  [auth] Acceso al panel con contraseña desde 127.0.0.1
