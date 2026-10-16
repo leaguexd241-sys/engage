@@ -51,11 +51,11 @@ function contentWords(text) {
 }
 
 function grade(score) {
-  if (score >= 75) return { key: 'excelente', label: 'Excelente' };
-  if (score >= 50) return { key: 'bueno', label: 'Bueno' };
-  if (score >= 30) return { key: 'aceptable', label: 'Aceptable' };
-  if (score >= 15) return { key: 'bajo', label: 'Bajo' };
-  return { key: 'spam', label: 'Spam / vacío' };
+  if (score >= 75) return { key: 'excelente', label: 'Excellent' };
+  if (score >= 50) return { key: 'bueno', label: 'Good' };
+  if (score >= 30) return { key: 'aceptable', label: 'Acceptable' };
+  if (score >= 15) return { key: 'bajo', label: 'Low' };
+  return { key: 'spam', label: 'Spam / empty' };
 }
 
 /**
@@ -76,7 +76,7 @@ function analyzeReply(text, { tweetText = '' } = {}) {
 
   if (nWords === 0) {
     const onlyEmoji = emojis > 0;
-    notes.push(onlyEmoji ? 'Sólo contiene emojis' : 'El comentario no tiene texto');
+    notes.push(onlyEmoji ? 'Contains only emojis' : 'The reply has no text');
     const s = onlyEmoji ? 3 : 0;
     return { score: s, grade: grade(s), notes, stats: { words: 0, unique: 0, emojis, relevance: 0 } };
   }
@@ -95,7 +95,7 @@ function analyzeReply(text, { tweetText = '' } = {}) {
     const replyStems = new Set(contentWords(noUrls).map(stem));
     for (const w of replyStems) if (tweetWords.has(w)) overlap += 1;
     score += overlap >= 3 ? 20 : overlap === 2 ? 16 : overlap === 1 ? 10 : 0;
-    if (overlap > 0) notes.push(`Relacionado con el post (${overlap} ${overlap === 1 ? 'tema' : 'temas'} en común)`);
+    if (overlap > 0) notes.push(`Related to the post (${overlap} ${overlap === 1 ? 'topic' : 'topics'} in common)`);
   } else {
     score += 8;
   }
@@ -109,36 +109,36 @@ function analyzeReply(text, { tweetText = '' } = {}) {
   // 5) Uso equilibrado de emojis (0-10)
   if (emojis === 0) score += 6;
   else if (emojis <= 3 && emojis / (nWords + emojis) <= 0.3) score += 10;
-  else notes.push('Demasiados emojis');
+  else notes.push('Many emojis');
 
   // Penalizaciones
   const normalized = lower.join(' ');
   const generic = GENERIC_PHRASES.has(normalized) || (nWords <= 6 && lower.every((w) => FILLER.has(w)));
   if (generic) {
     score -= 35;
-    notes.push('Comentario genérico (no aporta nada)');
+    notes.push('Short or generic reply');
   }
   if (/(.)\1{4,}/u.test(clean.replace(/\s/g, ''))) {
     score -= 10;
-    notes.push('Caracteres repetidos');
+    notes.push('Repeated characters');
   }
   const counts = new Map();
   for (const w of lower) counts.set(w, (counts.get(w) || 0) + 1);
   if (nWords >= 3 && Math.max(...counts.values()) >= 3 && uniqueRatio < 0.5) {
     score -= 10;
-    notes.push('Palabras repetidas');
+    notes.push('Repeated words');
   }
   if (nWords >= 3 && letters.length >= 8 && upperRatio > 0.8) {
     score -= 8;
-    notes.push('Todo en mayúsculas');
+    notes.push('All uppercase');
   }
   if (SPAM_RE.test(stripAccents(clean))) {
     score = Math.min(score, 45) - 30;
-    notes.push('Posible spam o autopromoción');
+    notes.push('Possible spam or self-promotion');
   }
 
   score = Math.max(0, Math.min(100, Math.round(score)));
-  if (!generic && nWords < 3) notes.push('Muy corto');
+  if (!generic && nWords < 3) notes.push('Very short');
   return {
     score,
     grade: grade(score),

@@ -61,4 +61,12 @@ function parseJson(text) {
   }
 }
 
-module.exports = { httpGet, readLimited, parseJson };
+function retryAfterMs(headers, now = Date.now()) {
+  const value = headers?.get?.('retry-after');
+  if (!value) return null;
+  const seconds = Number(value);
+  const ms = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(value) - now;
+  return Number.isFinite(ms) && ms >= 0 ? Math.min(ms, 24 * 3600_000) : null;
+}
+
+module.exports = { httpGet, readLimited, parseJson, retryAfterMs };

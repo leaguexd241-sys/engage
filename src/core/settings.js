@@ -6,10 +6,10 @@ const { clampDuration } = require('../util/time');
 const ACTIONS = ['like', 'repost', 'reply', 'quote'];
 
 const ACTION_INFO = {
-  like: { label: 'Like', emoji: '❤️', verb: 'dar like' },
-  repost: { label: 'Repost', emoji: '🔁', verb: 'repostear' },
-  reply: { label: 'Comentario', emoji: '💬', verb: 'comentar' },
-  quote: { label: 'Cita', emoji: '🗨️', verb: 'citar' },
+  like: { label: 'Like', emoji: '❤️', verb: 'like' },
+  repost: { label: 'Repost', emoji: '🔁', verb: 'repost' },
+  reply: { label: 'Reply', emoji: '💬', verb: 'reply' },
+  quote: { label: 'Quote', emoji: '🗨️', verb: 'quote' },
 };
 
 const PROOF_MODES = ['declared', 'screenshot', 'review'];

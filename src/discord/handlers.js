@@ -24,10 +24,8 @@ class InteractionHandler {
     this.config = config;
     this.log = log;
     this.cooldown = new Cooldown();
-  }
-
-  get dashboardUrl() {
-    return this.config?.web?.enabled ? this.config.web.publicUrl : null;
+    this.active = new Set();
+    this.stopped = false;
   }
 
   // ─── Utilidades ────────────────────────────────────────────────
@@ -67,16 +65,16 @@ class InteractionHandler {
   }
 
   requireStaff(i, settings) {
-    if (!this.isStaff(i, settings)) throw new UserError('Esta acción es sólo para el staff (permiso **Gestionar servidor** o el rol de staff configurado).', 'FORBIDDEN');
+    if (!this.isStaff(i, settings)) throw new UserError('This action is for staff only (**Manage Server** permission or the configured staff role).', 'FORBIDDEN');
   }
 
   requireAdmin(i) {
-    if (!this.isAdmin(i)) throw new UserError('Necesitas el permiso **Gestionar servidor** para cambiar la configuración.', 'FORBIDDEN');
+    if (!this.isAdmin(i)) throw new UserError('You need **Manage Server** permission to change settings.', 'FORBIDDEN');
   }
 
   hit(i, key, ms) {
     const wait = this.cooldown.hit(`${key}:${i.user.id}`, ms);
-    if (wait) throw new UserError(`Espera ${Math.ceil(wait / 1000)} s antes de volver a intentarlo.`, 'COOLDOWN');
+    if (wait) throw new UserError(`Wait ${Math.ceil(wait / 1000)} seconds before trying again.`, 'COOLDOWN');
   }
 
   async deferEphemeral(i) {
@@ -96,7 +94,7 @@ class InteractionHandler {
       payload = ui.errorMessage(err.message);
     } else {
       this.log.error('Error manejando una interacción:', err);
-      payload = ui.errorMessage('Ocurrió un error inesperado. Quedó registrado; inténtalo de nuevo en un momento.');
+      payload = ui.errorMessage('An unexpected error was logged. Please try again shortly.');
     }
     try {
       if (i.isAutocomplete?.()) return;
@@ -104,16 +102,29 @@ class InteractionHandler {
       else if (i.deferred || i.replied) await i.followUp(payload);
       else await i.reply(payload);
     } catch (e2) {
-      this.log.debug(`No se pudo informar del error al usuario: ${e2.message}`);
+      this.log.debug(`No se pudo informar del error al user: ${e2.message}`);
     }
   }
 
   // ─── Entrada ───────────────────────────────────────────────────
-  async handle(i) {
+  handle(i) {
+    if (this.stopped) return Promise.resolve();
+    const job = this._handle(i).finally(() => this.active.delete(job));
+    this.active.add(job);
+    return job;
+  }
+
+  async stop() {
+    this.stopped = true;
+    await Promise.allSettled([...this.active]);
+    this.cooldown.cache?.clear();
+  }
+
+  async _handle(i) {
     try {
       if (i.isAutocomplete()) return await this.autocomplete(i);
       if (!i.inGuild() || !i.guildId) {
-        return await i.reply(ui.errorMessage('Este bot sólo funciona dentro de un servidor.'));
+        return await i.reply(ui.errorMessage('This bot only works inside a server.'));
       }
       if (i.isChatInputCommand()) return await this.command(i);
       if (i.isButton()) return await this.button(i);
@@ -127,23 +138,23 @@ class InteractionHandler {
   async autocomplete(i) {
     try {
       const focused = i.options.getFocused(true);
-      if (focused.name !== 'tarea' || !i.guildId) return await i.respond([]);
+      if (focused.name !== 'task' || !i.guildId) return await i.respond([]);
       const q = String(focused.value || '')
         .replace('#', '')
         .trim()
         .toLowerCase();
-      const withClosed = i.commandName === 'tarea' && i.options.getSubcommand(false) === 'estado';
+      const withClosed = i.commandName === 'task' && i.options.getSubcommand(false) === 'status';
       const tasks = withClosed ? this.store.listTasks(i.guildId, { limit: 25 }).items : this.store.activeTasks(i.guildId);
       const choices = tasks
         .filter((t) => !q || String(t.id).startsWith(q) || String(t.tweet?.author?.handle || '').toLowerCase().includes(q) || String(t.tweet?.text || '').toLowerCase().includes(q))
         .slice(0, 25)
         .map((t) => ({
-          name: truncate(`#${t.id} · @${t.tweet?.author?.handle || '?'} · ${String(t.tweet?.text || '').replace(/\s+/g, ' ')}${t.status !== 'active' ? ' (cerrada)' : ''}`, 100),
+          name: truncate(`#${t.id} · @${t.tweet?.author?.handle || '?'} · ${String(t.tweet?.text || '').replace(/\s+/g, ' ')}${t.status !== 'active' ? ' (closed)' : ''}`, 100),
           value: t.id,
         }));
       await i.respond(choices);
     } catch (err) {
-      this.log.debug(`Autocompletado falló: ${err.message}`);
+      this.log.debug(`Autocompletedo falló: ${err.message}`);
       try {
         await i.respond([]);
       } catch {
@@ -157,42 +168,35 @@ class InteractionHandler {
     const g = i.guildId;
     const settings = this.store.getSettings(g);
     switch (i.commandName) {
-      case 'vincular':
-        return this.startLink(i, i.options.getString('usuario', true));
-      case 'desvincular': {
+      case 'link':
+        return this.startLink(i, i.options.getString('user', true));
+      case 'unlink': {
         const ok = this.engine.links.unlink(i.user.id, { guildId: g, actor: { id: i.user.id, name: i.user.username } });
-        return i.reply(ok ? ui.successMessage('Tu cuenta de X se desvinculó. Puedes vincular otra con `/vincular`.') : ui.infoMessage('No tenías ninguna cuenta de X vinculada.'));
+        return i.reply(ok ? ui.successMessage('Your X account was unlinked. Link another with `/link`.') : ui.infoMessage('You did not have a linked X account.'));
       }
-      case 'perfil':
+      case 'profile':
         return this.profile(i);
-      case 'tareas':
+      case 'tasks':
         return this.taskList(i);
-      case 'verificar':
+      case 'verify':
         return this.verifyCommand(i);
-      case 'prueba':
+      case 'proof':
         return this.proof(i);
       case 'ranking':
         return this.ranking(i);
-      case 'ayuda':
-        return i.reply(ui.helpMessage({ staff: this.isStaff(i, settings), dashboardUrl: this.dashboardUrl }));
-      case 'panel': {
-        this.requireStaff(i, settings);
-        if (!this.dashboardUrl) return i.reply(ui.infoMessage('El panel web está desactivado en la configuración del bot.'));
-        return i.reply(
-          ui.ephemeral({
-            embeds: [ui.embed({ color: ui.COLORS.info, title: '🖥️ Panel web de control', description: `Gestiona tareas, miembros, revisiones y ajustes desde:\n${this.dashboardUrl}` })],
-            components: [ui.row(ui.button({ label: 'Abrir panel', emoji: '🖥️', url: this.dashboardUrl }))],
-          }),
-        );
-      }
-      case 'tarea':
+      case 'help':
+        return i.reply(ui.helpMessage({ staff: this.isStaff(i, settings) }));
+      case 'task':
         return this.taskCommand(i, settings);
-      case 'miembro':
+      case 'member':
         return this.memberCommand(i, settings);
       case 'config':
         return this.configCommand(i, settings);
+      case 'points':
+        this.requireAdmin(i);
+        return this.savePoints(i);
       default:
-        return i.reply(ui.errorMessage('Comando desconocido. Si acabas de actualizar el bot, espera a que Discord refresque los comandos.'));
+        return i.reply(ui.errorMessage('Unknown command. If the bot was just updated, allow Discord to refresh its commands.'));
     }
   }
 
@@ -204,7 +208,7 @@ class InteractionHandler {
     const current = this.store.getLink(user.id);
     const wanted = String(handleInput || '').replace(/^@/, '').toLowerCase();
     if (current?.verified && current.handle.toLowerCase() === wanted) {
-      return this.respond(i, ui.infoMessage(`Ya tienes vinculada y verificada la cuenta **@${current.handle}**. ✅`, { title: 'Cuenta ya vinculada' }));
+      return this.respond(i, ui.infoMessage(`You have already linked and verified **@${current.handle}**. ✅`, { title: 'Account already linked' }));
     }
     const start = this.engine.links.start(user, i.guildId, handleInput);
     return this.respond(
@@ -220,7 +224,7 @@ class InteractionHandler {
   }
 
   async profile(i) {
-    const target = i.options.getUser('miembro') || i.user;
+    const target = i.options.getUser('member') || i.user;
     const g = i.guildId;
     const member = target.id === i.user.id ? this.store.touchMember(g, this.userOf(i)) : this.store.getMember(g, target.id);
     const link = this.store.getLink(target.id);
@@ -242,17 +246,17 @@ class InteractionHandler {
   }
 
   async ranking(i) {
-    const periodo = i.options.getString('periodo') || 'todo';
-    const since = periodo === 'semana' ? Date.now() - 7 * 86400_000 : periodo === 'mes' ? Date.now() - 30 * 86400_000 : 0;
+    const periodo = i.options.getString('period') || 'all';
+    const since = periodo === 'week' ? Date.now() - 7 * 86400_000 : periodo === 'month' ? Date.now() - 30 * 86400_000 : 0;
     const rows = this.store.leaderboard(i.guildId, { sinceMs: since, limit: 10 });
-    const title = { semana: 'Ranking · últimos 7 días', mes: 'Ranking · últimos 30 días', todo: 'Ranking general' }[periodo];
+    const title = { week: 'Leaderboard · last 7 days', month: 'Leaderboard · last 30 days', all: 'All-time leaderboard' }[periodo];
     return i.reply(ui.ephemeral(ui.leaderboardMessage(rows, { title, guildName: i.guild?.name })));
   }
 
   // ─── Verificación ──────────────────────────────────────────────
   /** Decide qué tarea verificar cuando el usuario no indica ninguna. */
   pickTask(i) {
-    const id = i.options.getInteger('tarea');
+    const id = i.options.getInteger('task');
     if (id) return this.engine.tasks.get(i.guildId, id);
     const active = this.store.activeTasks(i.guildId);
     const done = this.store.completedTaskIds(
@@ -261,15 +265,15 @@ class InteractionHandler {
     );
     const open = active.filter((t) => !done.has(t.id));
     if (open.length === 1) return open[0];
-    if (open.length === 0) throw new UserError(active.length ? '¡Ya completaste todas las tareas activas! 🎉' : 'No hay tareas activas ahora mismo.', 'NO_TASKS');
-    throw new UserError(`Tienes ${open.length} tareas pendientes: indica cuál con la opción \`tarea\` (${open.map((t) => `#${t.id}`).join(', ')}).`, 'AMBIGUOUS');
+    if (open.length === 0) throw new UserError(active.length ? 'You have completed all active tasks! 🎉' : 'No active tasks right now.', 'NO_TASKS');
+    throw new UserError(`You have ${open.length} pending tasks: choose one with the \`task\` (${open.map((t) => `#${t.id}`).join(', ')}).`, 'AMBIGUOUS');
   }
 
   async verifyCommand(i) {
     const task = this.pickTask(i);
     const inputs = {};
-    const c = i.options.getString('comentario');
-    const q = i.options.getString('cita');
+    const c = i.options.getString('reply');
+    const q = i.options.getString('quote');
     if (c) inputs.reply = c;
     if (q) inputs.quote = q;
     return this.startVerify(i, task, inputs);
@@ -279,7 +283,7 @@ class InteractionHandler {
   async startVerify(i, task, inputs = {}) {
     const settings = this.store.getSettings(i.guildId);
     if (!this.engine.tasks.isOpen(task)) {
-      return this.respond(i, ui.infoMessage(`La tarea #${task.id} ya terminó. ¡Atento a la próxima! 👀`, { title: '⏰ Tarea finalizada' }));
+      return this.respond(i, ui.infoMessage(`Task #${task.id} has ended. Watch for the next one! 👀`, { title: '⏰ Task finished' }));
     }
     const link = this.store.getLink(i.user.id);
     const v = settings.verification;
@@ -301,9 +305,9 @@ class InteractionHandler {
   }
 
   async proof(i) {
-    const task = this.engine.tasks.get(i.guildId, i.options.getInteger('tarea', true));
-    const action = i.options.getString('accion', true);
-    const att = i.options.getAttachment('imagen', true);
+    const task = this.engine.tasks.get(i.guildId, i.options.getInteger('task', true));
+    const action = i.options.getString('action', true);
+    const att = i.options.getAttachment('image', true);
     this.hit(i, 'proof', 5000);
     await this.deferEphemeral(i);
     const r = await this.engine.verification.submitProof({
@@ -316,8 +320,8 @@ class InteractionHandler {
     return this.respond(
       i,
       r.autoApproved
-        ? ui.successMessage(`Captura recibida y **aprobada automáticamente** por tu nivel de confianza (${label}, tarea #${task.id}).`, { title: 'Prueba aceptada' })
-        : ui.infoMessage(`Captura recibida para **${label}** en la tarea #${task.id}. El staff la revisará pronto y te avisaré.`, { title: '🕓 Prueba enviada', color: ui.COLORS.warn }),
+        ? ui.successMessage(`Screenshot received and **approved automatically** based on your trust level (${label}, task #${task.id}).`, { title: 'Evidence accepted' })
+        : ui.infoMessage(`Screenshot received for **${label}** on task #${task.id}. Staff will review it and notify you.`, { title: '🕓 Evidence submitted', color: ui.COLORS.warn }),
     );
   }
 
@@ -328,25 +332,33 @@ class InteractionHandler {
     const actor = { id: i.user.id, name: i.user.username };
     const g = i.guildId;
 
-    if (sub === 'crear') {
-      const picks = { like: i.options.getBoolean('like'), repost: i.options.getBoolean('repost'), reply: i.options.getBoolean('comentario'), quote: i.options.getBoolean('cita') };
+    if (sub === 'create') {
+      const picks = { like: i.options.getBoolean('like'), repost: i.options.getBoolean('repost'), reply: i.options.getBoolean('reply'), quote: i.options.getBoolean('quote') };
       const anyGiven = Object.values(picks).some((v) => v !== null);
       const actions = anyGiven ? Object.keys(picks).filter((k) => picks[k]) : undefined;
-      if (anyGiven && !actions.length) throw new UserError('Marca al menos una acción (like, repost, comentario o cita) en `true`.', 'NO_ACTIONS');
+      if (anyGiven && !actions.length) throw new UserError('Set at least one action (like, repost, reply or quote) to `true`.', 'NO_ACTIONS');
       await this.deferEphemeral(i);
-      const participants = i.options.getRole('participantes');
-      const mention = i.options.getRole('mencionar');
-      const channel = i.options.getChannel('canal');
+      const participants = i.options.getRole('participants');
+      const mention = i.options.getRole('mention');
+      const channel = i.options.getChannel('channel');
+      const points = {};
+      for (const action of ['like', 'repost', 'reply', 'quote', 'bonus']) {
+        const value = i.options.getInteger(`${action}-points`);
+        if (value !== null) points[action] = value;
+      }
+      const multiplier = i.options.getNumber('multiplier');
+      if (multiplier !== null && Object.keys(points).length) throw new UserError('Choose individual point values or a multiplier for this post.');
       const task = await this.engine.tasks.create({
         guildId: g,
-        tweetUrl: i.options.getString('enlace', true),
+        tweetUrl: i.options.getString('url', true),
         actions,
-        duration: i.options.getString('duracion') || undefined,
-        pointsMultiplier: i.options.getNumber('multiplicador') || undefined,
+        duration: i.options.getString('duration') || undefined,
+        pointsMultiplier: multiplier || undefined,
+        points: Object.keys(points).length ? points : undefined,
         channelId: channel?.id,
         roleId: participants ? participants.id : undefined,
         pingRoleId: mention ? mention.id : undefined,
-        note: i.options.getString('nota') || undefined,
+        note: i.options.getString('note') || undefined,
         createdBy: actor,
       });
       const url = ui.messageUrl(g, task.channelId, task.messageId);
@@ -356,79 +368,79 @@ class InteractionHandler {
           embeds: [
             ui.embed({
               color: ui.COLORS.ok,
-              title: `✅ Tarea #${task.id} publicada`,
-              description: `En <#${task.channelId}> · ${ui.actionsLine(task.actions)}\nTermina ${discordTs(task.endsAt, 'R')} (${formatDuration((task.endsAt - task.createdAt) / 60000)}).`,
+              title: `✅ Task #${task.id} published`,
+              description: `In <#${task.channelId}> · ${ui.actionsLine(task.actions)}\nEnds ${discordTs(task.endsAt, 'R')} (${formatDuration((task.endsAt - task.createdAt) / 60000)}).`,
             }),
           ],
-          components: url ? [ui.row(ui.button({ label: 'Ver tarea', emoji: '🚀', url }))] : [],
+          components: url ? [ui.row(ui.button({ label: 'View task', emoji: '🚀', url }))] : [],
         }),
       );
     }
 
-    const task = this.engine.tasks.get(g, i.options.getInteger('tarea', true));
-    if (sub === 'estado') {
+    const task = this.engine.tasks.get(g, i.options.getInteger('task', true));
+    if (sub === 'status') {
       await this.deferEphemeral(i);
       return this.respond(i, ui.statusMessage(task, await this.engine.tasks.summary(task)));
     }
-    if (sub === 'cerrar') {
+    if (sub === 'close') {
       await this.deferEphemeral(i);
       const s = await this.engine.tasks.close(g, task.id, { actor });
       return this.respond(
         i,
-        ui.successMessage(`Tarea #${task.id} cerrada. **${s.completed.length}** completaron y **${s.notCompletedCount}** no. El informe se publicó en el canal.`, { title: 'Tarea cerrada' }),
+        ui.successMessage(`Task #${task.id} closed. **${s.completed.length}** completed and **${s.notCompletedCount}** did not. The report was posted in the channel.`, { title: 'Task closed' }),
       );
     }
-    if (sub === 'cancelar') {
+    if (sub === 'cancel') {
       await this.engine.tasks.cancel(g, task.id, { actor });
-      return i.reply(ui.successMessage(`Tarea #${task.id} cancelada.`, { title: 'Tarea cancelada' }));
+      return i.reply(ui.successMessage(`Task #${task.id} cancelled.`, { title: 'Task cancelled' }));
     }
-    if (sub === 'recordar') {
+    if (sub === 'remind') {
       await this.deferEphemeral(i);
       const r = await this.engine.tasks.remind(g, task.id, { actor });
-      return this.respond(i, ui.successMessage(r.targets ? `Recordatorio enviado a **${r.targets}** miembros.` : 'Nadie tiene la tarea pendiente. 🎉', { title: 'Recordatorio' }));
+      return this.respond(i, ui.successMessage(r.targets ? `Reminder sent to **${r.targets}** members.` : 'Everyone has completed the task. 🎉', { title: 'Reminder' }));
     }
-    if (sub === 'extender') {
-      const t = await this.engine.tasks.extend(g, task.id, i.options.getString('tiempo', true), { actor });
-      return i.reply(ui.successMessage(`La tarea #${t.id} ahora termina ${discordTs(t.endsAt, 'R')}.`, { title: 'Tarea extendida' }));
+    if (sub === 'extend') {
+      const t = await this.engine.tasks.extend(g, task.id, i.options.getString('time', true), { actor });
+      return i.reply(ui.successMessage(`Task #${t.id} now ends ${discordTs(t.endsAt, 'R')}.`, { title: 'Task extended' }));
     }
-    throw new UserError('Subcomando desconocido.');
+    throw new UserError('Unknown subcommand.');
   }
 
   async memberCommand(i, settings) {
     this.requireStaff(i, settings);
     const sub = i.options.getSubcommand();
-    const target = i.options.getUser('usuario', true);
+    const target = i.options.getUser('user', true);
     const g = i.guildId;
     const actor = { id: i.user.id, name: i.user.username };
-    if (target.bot) throw new UserError('No se puede usar con bots.');
+    if (target.bot) throw new UserError('This command cannot be used with bots.');
     this.store.touchMember(g, { id: target.id, username: target.username, displayName: target.globalName || target.username });
 
-    if (sub === 'puntos') {
-      const amount = i.options.getInteger('cantidad', true);
-      const reason = i.options.getString('motivo') || 'Ajuste manual';
-      if (!amount) throw new UserError('La cantidad no puede ser 0.');
+    if (sub === 'points') {
+      const amount = i.options.getInteger('amount', true);
+      const reason = i.options.getString('reason') || 'Manual adjustment';
+      if (!amount) throw new UserError('The amount cannot be 0.');
       this.store.addLedger({ guildId: g, userId: target.id, kind: 'manual', amount, reason });
-      this.engine.tasks.audit(g, 'points', actor, `${amount > 0 ? '+' : ''}${amount} puntos a <@${target.id}> (${reason})`, { userId: target.id });
+      this.engine.tasks.audit(g, 'points', actor, `${amount > 0 ? '+' : ''}${amount} points for <@${target.id}> (${reason})`, { userId: target.id });
       this.engine.bus.change(g, 'member', { userId: target.id });
       const m = this.store.getMember(g, target.id);
-      return i.reply(ui.successMessage(`<@${target.id}> ahora tiene **${fmtNum(m.points)}** puntos.`, { title: 'Puntos actualizados' }));
+      return i.reply(ui.successMessage(`<@${target.id}> now has **${fmtNum(m.points)}** points.`, { title: 'Points updated' }));
     }
-    if (sub === 'bloquear' || sub === 'desbloquear') {
-      const block = sub === 'bloquear';
+    if (sub === 'block' || sub === 'unblock') {
+      const block = sub === 'block';
       this.store.updateMember(g, target.id, { blacklisted: block });
-      this.engine.tasks.audit(g, 'member', actor, `<@${target.id}> ${block ? 'bloqueado' : 'desbloqueado'} para tareas`, { userId: target.id });
+      this.engine.tasks.audit(g, 'member', actor, `<@${target.id}> ${block ? 'blocked' : 'unblocked'} from tasks`, { userId: target.id });
       this.engine.bus.change(g, 'member', { userId: target.id });
-      return i.reply(ui.successMessage(`<@${target.id}> ${block ? 'ya no puede' : 'vuelve a poder'} participar en tareas.`));
+      return i.reply(ui.successMessage(`<@${target.id}> ${block ? 'can no longer' : 'can now'} participate in tasks.`));
     }
-    if (sub === 'vincular') {
-      const link = this.engine.links.adminLink({ userId: target.id, handleInput: i.options.getString('cuenta', true), guildId: g, actor });
-      return i.reply(ui.successMessage(`<@${target.id}> vinculado a **@${link.handle}** (verificado por el staff).`));
+    if (sub === 'link') {
+      const link = this.engine.links.adminLink({ userId: target.id, handleInput: i.options.getString('account', true), guildId: g, actor });
+      return i.reply(ui.successMessage(`<@${target.id}> linked to **@${link.handle}** (verified by staff).`));
     }
-    if (sub === 'desvincular') {
+    if (sub === 'unlink') {
       const ok = this.engine.links.unlink(target.id, { guildId: g, actor });
-      return i.reply(ok ? ui.successMessage(`Se quitó la cuenta de X de <@${target.id}>.`) : ui.infoMessage('Ese miembro no tenía cuenta vinculada.'));
+      return i.reply(ok ? ui.successMessage(`Unlinked the X account for <@${target.id}>.`) : ui.infoMessage('That member did not have a linked account.'));
     }
-    throw new UserError('Subcomando desconocido.');
+    throw new UserError('Unknown subcommand.');
   }
 
   async configCommand(i, settings) {
@@ -437,65 +449,62 @@ class InteractionHandler {
     const actor = { id: i.user.id, name: i.user.username };
     let patch = null;
     switch (sub) {
-      case 'ver':
-        return i.reply(ui.configMessage(settings, { dashboardUrl: this.dashboardUrl }));
-      case 'canal':
-        patch = { tasksChannelId: i.options.getChannel('canal', true).id };
+      case 'view':
+        return i.reply(ui.configMessage(settings));
+      case 'channel':
+        patch = { tasksChannelId: i.options.getChannel('channel', true).id };
         break;
       case 'logs':
-        patch = { logChannelId: i.options.getChannel('canal')?.id || null };
+        patch = { logChannelId: i.options.getChannel('channel')?.id || null };
         break;
-      case 'rol-participantes':
-        patch = { participantRoleId: i.options.getRole('rol')?.id || null };
+      case 'participant-role':
+        patch = { participantRoleId: i.options.getRole('role')?.id || null };
         break;
-      case 'rol-staff':
-        patch = { staffRoleId: i.options.getRole('rol')?.id || null };
+      case 'staff-role':
+        patch = { staffRoleId: i.options.getRole('role')?.id || null };
         break;
-      case 'rol-mencion':
-        patch = { pingRoleId: i.options.getRole('rol')?.id || null };
+      case 'mention-role':
+        patch = { pingRoleId: i.options.getRole('role')?.id || null };
         break;
-      case 'verificacion':
-        patch = { verification: { proofMode: i.options.getString('modo', true) } };
+      case 'verification':
+        patch = { verification: { proofMode: i.options.getString('mode', true) } };
         break;
-      case 'calidad':
-        patch = { verification: { minReplyQuality: i.options.getInteger('minimo', true) } };
+      case 'quality':
+        patch = { verification: { minReplyQuality: i.options.getInteger('minimum', true) } };
         break;
-      case 'recordatorios': {
-        const r = { enabled: i.options.getBoolean('activar', true) };
-        const m = i.options.getInteger('minutos');
-        const mode = i.options.getString('modo');
+      case 'reminders': {
+        const r = { enabled: i.options.getBoolean('enabled', true) };
+        const m = i.options.getInteger('minutes');
+        const mode = i.options.getString('mode');
         if (m) r.minutesBefore = m;
         if (mode) r.mode = mode;
         patch = { reminders: r };
         break;
       }
-      case 'puntos': {
-        const p = {};
-        for (const [opt, key] of [
-          ['like', 'like'],
-          ['repost', 'repost'],
-          ['comentario', 'reply'],
-          ['cita', 'quote'],
-          ['bonus', 'bonus'],
-        ]) {
-          const v = i.options.getInteger(opt);
-          if (v !== null) p[key] = v;
-        }
-        if (!Object.keys(p).length) throw new UserError('Indica al menos un valor de puntos.');
-        patch = { points: p };
-        break;
-      }
-      case 'duracion': {
-        const d = parseDuration(i.options.getString('tiempo', true));
-        if (!d) throw new UserError('Duración no válida. Ejemplos: `45m`, `2h`, `1d`.');
+      case 'points':
+        return this.savePoints(i);
+      case 'duration': {
+        const d = parseDuration(i.options.getString('time', true));
+        if (!d) throw new UserError('Invalid duration. Examples: `45m`, `2h`, `1d`.');
         patch = { defaultDurationMinutes: d };
         break;
       }
       default:
-        throw new UserError('Subcomando desconocido.');
+        throw new UserError('Unknown subcommand.');
     }
     const updated = this.engine.updateSettings(i.guildId, patch, actor);
-    return i.reply(ui.configMessage(updated, { dashboardUrl: this.dashboardUrl }));
+    return i.reply(ui.configMessage(updated));
+  }
+
+  async savePoints(i) {
+    const points = {};
+    for (const action of ['like', 'repost', 'reply', 'quote', 'bonus']) {
+      const value = i.options.getInteger(action);
+      if (value !== null) points[action] = value;
+    }
+    if (!Object.keys(points).length) throw new UserError('Provide at least one point value.');
+    const updated = this.engine.updateSettings(i.guildId, { points }, { id: i.user.id, name: i.user.username });
+    return i.reply(ui.configMessage(updated));
   }
 
   // ─── Botones ───────────────────────────────────────────────────
@@ -534,9 +543,9 @@ class InteractionHandler {
       if (a === 'tweet') return i.showModal(ui.linkTweetModal());
       if (a === 'skip') {
         const settings = this.store.getSettings(g);
-        if (settings.verification.requireVerifiedLink) throw new UserError('Este servidor exige verificar la cuenta.');
+        if (settings.verification.requireVerifiedLink) throw new UserError('This server requires account verification.');
         const req = this.store.getLinkRequest(i.user.id);
-        if (!req) throw new UserError('No tienes ninguna vinculación pendiente. Usa `/vincular`.');
+        if (!req) throw new UserError('You have no pending link request. Use `/link`.');
         const link = this.engine.links.linkUnverified(this.userOf(i), g, req.handle);
         return i.reply(ui.linkedMessage(link));
       }
@@ -550,7 +559,7 @@ class InteractionHandler {
       }
       if (a === 'no') return i.showModal(ui.rejectModal(Number(b)));
     }
-    throw new UserError('Este botón ya no es válido.');
+    throw new UserError('This button is no longer valid.');
   }
 
   decidedReview(i, r) {
@@ -579,7 +588,7 @@ class InteractionHandler {
       if (val('reply')) inputs.reply = val('reply').trim();
       if (val('quote')) inputs.quote = val('quote').trim();
       await this.deferEphemeral(i);
-      if (!this.engine.tasks.isOpen(task)) throw new UserError(`La tarea #${task.id} terminó mientras rellenabas el formulario.`);
+      if (!this.engine.tasks.isOpen(task)) throw new UserError(`Task #${task.id} ended while you were filling out the form.`);
       return this.runVerify(i, task, inputs);
     }
     if (kind === 'linkstart') return this.startLink(i, val('handle'));
@@ -599,9 +608,9 @@ class InteractionHandler {
         i._engUpdate = true;
         return i.update(payload);
       }
-      return i.reply(ui.successMessage('Envío rechazado.'));
+      return i.reply(ui.successMessage('Submission rejected.'));
     }
-    throw new UserError('Formulario desconocido.');
+    throw new UserError('Unknown form.');
   }
 }
 

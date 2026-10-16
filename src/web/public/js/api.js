@@ -13,7 +13,7 @@ export function setUnauthorizedHandler(fn) {
 }
 
 export async function api(path, { method = 'GET', body, signal } = {}) {
-  const opts = { method, headers: { 'x-requested-with': 'engage-panel' }, credentials: 'same-origin', signal };
+  const opts = { method, headers: { 'x-requested-with': 'engage-panel' }, credentials: 'same-origin', signal: signal || AbortSignal.timeout(30_000) };
   if (body !== undefined) {
     opts.headers['content-type'] = 'application/json';
     opts.body = JSON.stringify(body);

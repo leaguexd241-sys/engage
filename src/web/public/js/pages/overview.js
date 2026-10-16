@@ -1,4 +1,4 @@
-import { get } from '../api.js';
+import { get, post } from '../api.js';
 import { html, icon, num, ago, avatar, actionIcons, withMentions, mountColumnChart, disposeCharts, emptyState, raw, esc, showTip, hideTip, $, $$ } from '../ui.js';
 import { setTitle, state } from '../main.js';
 
@@ -61,17 +61,18 @@ async function load(ctx) {
   const data = await get(`/guilds/${gid}/overview`);
   if (!ctx.isCurrent()) return;
   const g = state.guilds.find((x) => x.id === gid);
-  setTitle('Resumen', g ? g.name : '');
+  setTitle('Resumen', g ? g.name : '', { literalSub: true });
   const c = data.counts;
   const texts = data.recent.map((r) => r.message);
   users = {};
   if (texts.length) {
     try {
-      users = (await ctx.post(`/guilds/${gid}/mentions`, { texts })).users;
+      users = (await post(`/guilds/${gid}/mentions`, { texts })).users;
     } catch {
       users = {};
     }
   }
+  if (!ctx.isCurrent()) return;
   const totalWeek = data.daily.slice(-7).reduce((s, d) => s + d.verified, 0);
   const dayFmt = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
   const daily = data.daily.map((d) => {
@@ -173,7 +174,7 @@ async function load(ctx) {
 
 export default {
   async render(ctx) {
-    ctxRef = { ...ctx, post: (await import('../api.js')).post };
+    ctxRef = ctx;
     setTitle('Resumen');
     ctx.view.innerHTML = String(html`<div class="grid cols-4">${[1, 2, 3, 4].map(() => html`<div class="skeleton" style="min-height:110px"></div>`)}</div><div class="skeleton mt" style="min-height:300px"></div>`);
     await load(ctxRef);
@@ -189,6 +190,7 @@ export default {
     while (feed.children.length > 12) feed.lastElementChild.remove();
   },
   onTheme() {},
+  onLocale() { return ctxRef && load(ctxRef); },
   destroy() {
     clearTimeout(timer);
     ctxRef = null;

@@ -8,6 +8,8 @@ let items = [];
 let users = {};
 let type = '';
 let done = false;
+let loadSeq = 0;
+const MAX_ITEMS = 500;
 
 const TYPES = [
   ['', 'Todo'],
@@ -28,7 +30,7 @@ function renderList() {
   if (!box) return;
   box.innerHTML = String(
     items.length
-      ? html`<div class="feed">${items.map((a) => feedItem(a, users))}</div>${done ? '' : html`<div class="pager" style="justify-content:center"><button class="btn sm" data-act="more">Cargar más</button></div>`}`
+      ? html`<div class="feed activity-scroll" tabindex="0" role="log" aria-label="Actividad reciente">${items.map((a) => feedItem(a, users))}</div>${done ? '' : html`<div class="pager" style="justify-content:center"><button class="btn sm" data-act="more">Cargar más</button></div>`}`
       : emptyState('activity', 'Sin actividad', 'Aquí verás en tiempo real todo lo que pasa: tareas, verificaciones, rechazos, revisiones y alertas antifraude.'),
   );
 }
@@ -36,14 +38,15 @@ function renderList() {
 async function load(append = false) {
   const ctx = ctxRef;
   if (!ctx) return;
+  const seq = ++loadSeq;
   const q = new URLSearchParams();
   if (type) q.set('type', type);
   if (append && items.length) q.set('before', items[items.length - 1].id);
   const r = await get(`/guilds/${ctx.params.guildId}/activity?${q}`);
-  if (!ctx.isCurrent() || ctxRef !== ctx) return;
-  items = append ? [...items, ...r.items] : r.items;
+  if (!ctx.isCurrent() || ctxRef !== ctx || seq !== loadSeq) return;
+  items = (append ? [...items, ...r.items] : r.items).slice(0, MAX_ITEMS);
   users = { ...users, ...r.users };
-  done = r.items.length < 50;
+  done = r.items.length < 50 || items.length >= MAX_ITEMS;
   renderList();
 }
 
@@ -62,6 +65,8 @@ export default {
     await load();
   },
   async onAudit(entry) {
+    const ctx = ctxRef;
+    if (!ctx) return;
     if (type && entry.type !== type) return;
     const ids = [...String(entry.message).matchAll(/<@!?(\d{5,25})>/g)].map((m) => m[1]).filter((id) => !(id in users));
     if (ids.length) {
@@ -71,9 +76,16 @@ export default {
         /* se muestran como @usuario */
       }
     }
-    items = [entry, ...items].slice(0, 500);
+    if (ctxRef !== ctx || !ctx.isCurrent() || (type && entry.type !== type)) return;
+    if (items.some((item) => item.id === entry.id)) return;
+    items = [entry, ...items].slice(0, MAX_ITEMS);
+    const neededUsers = new Set(items.flatMap((item) => [...String(item.message).matchAll(/<@!?(\d{5,25})>/g)].map((m) => m[1])));
+    users = Object.fromEntries(Object.entries(users).filter(([id]) => neededUsers.has(id)));
     const feed = document.querySelector('#activity .feed');
-    if (feed) feed.insertAdjacentHTML('afterbegin', String(feedItem(entry, users, true)));
+    if (feed) {
+      feed.insertAdjacentHTML('afterbegin', String(feedItem(entry, users, true)));
+      while (feed.children.length > MAX_ITEMS) feed.lastElementChild.remove();
+    }
     else renderList();
   },
   destroy() {

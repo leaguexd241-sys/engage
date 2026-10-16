@@ -23,21 +23,29 @@ class Scheduler {
     this.flushing = false;
     this.lastMaintenance = 0;
     this.stopped = true;
+    this.activeJobs = new Set();
   }
 
   start() {
     if (!this.stopped) return;
     this.stopped = false;
-    this.timers.push(setInterval(() => this.tick(), TICK_MS));
-    this.timers.push(setInterval(() => this.flush(), FLUSH_MS));
+    this.timers.push(setInterval(() => this.track(this.tick()), TICK_MS));
+    this.timers.push(setInterval(() => this.track(this.flush()), FLUSH_MS));
     for (const t of this.timers) t.unref?.();
-    setImmediate(() => this.tick());
+    setImmediate(() => this.track(this.tick()));
   }
 
   stop() {
     this.stopped = true;
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
+    return Promise.allSettled([...this.activeJobs]);
+  }
+
+  track(job) {
+    this.activeJobs.add(job);
+    job.then(() => this.activeJobs.delete(job), () => this.activeJobs.delete(job));
+    return job;
   }
 
   async flush() {

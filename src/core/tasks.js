@@ -9,12 +9,13 @@ const { XError } = require('../twitter/errors');
 const { parseDuration, clampDuration } = require('../util/time');
 const { LruCache } = require('../util/lru');
 const { mapLimit } = require('../util/limiter');
+const { KeyedLock } = require('../util/ratelimit');
 
 /** Publicador por defecto cuando el bot no está conectado a Discord. */
 const OFFLINE_PUBLISHER = {
   online: false,
   async postTask() {
-    throw new UserError('El bot no está conectado a Discord. Revisa el token y que el bot esté en línea.', 'OFFLINE');
+    throw new UserError('The bot is not connected to Discord. Check the token and connection status.', 'OFFLINE');
   },
   async updateTask() {},
   async deleteTaskMessage() {},
@@ -41,6 +42,7 @@ class TaskService {
     this.publisher = OFFLINE_PUBLISHER;
     this.roleCache = new LruCache({ max: 200, ttlMs: 60_000 });
     this.dirty = new Set();
+    this.creationLock = new KeyedLock();
     this.lastManualReminder = new LruCache({ max: 1000, ttlMs: 10 * 60_000 });
   }
 
@@ -77,21 +79,28 @@ class TaskService {
   }
 
   async create(input) {
+    const parsed = parseTweetUrl(input.tweetUrl);
+    const result = await this.creationLock.run(`${input.guildId}:${parsed?.id || input.tweetUrl}`, () => this._create(input));
+    if (result.busy) throw new UserError('A task is already being created for this post. Please wait a few seconds.', 'BUSY');
+    return result.value;
+  }
+
+  async _create(input) {
     const guildId = input.guildId;
     const settings = this.store.getSettings(guildId);
     const parsed = parseTweetUrl(input.tweetUrl);
-    if (!parsed) throw new UserError('Ese enlace no es un post de X válido. Ejemplo: `https://x.com/usuario/status/1234567890`', 'BAD_URL');
+    if (!parsed) throw new UserError('Invalid X post link. Example: `https://x.com/user/status/1234567890`', 'BAD_URL');
 
     const channelId = input.channelId || settings.tasksChannelId;
     if (!channelId) {
-      throw new UserError('No hay canal de tareas configurado. Elige un canal o configúralo con `/config canal`.', 'NO_CHANNEL');
+      throw new UserError('No task channel is configured. Choose a channel or set one with `/config channel`.', 'NO_CHANNEL');
     }
 
     const actions = this.normalizeActions(input.actions, settings.defaultActions);
     let duration = settings.defaultDurationMinutes;
     if (input.duration !== undefined && input.duration !== null && input.duration !== '') {
       const d = parseDuration(input.duration);
-      if (!d) throw new UserError('Duración no válida. Usa por ejemplo `30m`, `2h`, `1d` o `1h30m`.', 'BAD_DURATION');
+      if (!d) throw new UserError('Invalid duration. Use for example `30m`, `2h`, `1d` or `1h30m`.', 'BAD_DURATION');
       duration = d;
     }
     duration = clampDuration(duration);
@@ -108,16 +117,16 @@ class TaskService {
     }
 
     const dup = this.store.activeTasks(guildId).find((t) => t.tweetId === parsed.id);
-    if (dup) throw new UserError(`Ya hay una tarea activa para ese post (**#${dup.id}**).`, 'DUPLICATE');
+    if (dup) throw new UserError(`There is already an active task for that post (**#${dup.id}**).`, 'DUPLICATE');
 
     let tweet;
     try {
       tweet = await this.x.getTweet(parsed.id, { fresh: true });
     } catch (err) {
       if (err instanceof XError) {
-        if (err.code === 'NOT_FOUND') throw new UserError('No encontramos ese post en X. ¿Está bien el enlace? ¿Lo borraron?', 'X_NOT_FOUND');
-        if (err.code === 'PROTECTED') throw new UserError('Ese post es de una cuenta privada: los miembros no podrían interactuar ni verificarlo.', 'X_PROTECTED');
-        throw new UserError('X no respondió a tiempo. Inténtalo de nuevo en unos segundos.', 'X_UNAVAILABLE');
+        if (err.code === 'NOT_FOUND') throw new UserError('Could not find that post on X. Check the link and whether it was deleted.', 'X_NOT_FOUND');
+        if (err.code === 'PROTECTED') throw new UserError('That post is from a private account. Members cannot interact with or verify it.', 'X_PROTECTED');
+        throw new UserError('X is temporarily unavailable. Try again later.', 'X_UNAVAILABLE');
       }
       throw err;
     }
@@ -151,11 +160,11 @@ class TaskService {
     } catch (err) {
       this.store.deleteTask(task.id);
       if (err instanceof UserError) throw err;
-      this.log?.warn(`No se pudo publicar la tarea en ${channelId}: ${err.message}`);
-      throw new UserError(`No pude publicar la tarea en el canal <#${channelId}>. ¿Tengo permiso para ver el canal, enviar mensajes e insertar enlaces? (${err.message})`, 'POST_FAILED');
+      this.log?.warn(`No se pudo publicar the task en ${channelId}: ${err.message}`);
+      throw new UserError(`Could not publish the task in channel <#${channelId}>. Check the View Channel, Send Messages and Embed Links permissions. (${err.message})`, 'POST_FAILED');
     }
     const saved = this.store.updateTask(task.id, { channelId: posted.channelId, messageId: posted.messageId });
-    this.audit(guildId, 'task', input.createdBy, `Tarea #${task.id} creada para ${tweet.url} (${actions.join(', ')}, ${duration} min)`, { taskId: task.id });
+    this.audit(guildId, 'task', input.createdBy, `Task #${task.id} created for ${tweet.url} (${actions.join(', ')}, ${duration} min)`, { taskId: task.id });
     this.bus?.change(guildId, 'task', { taskId: task.id });
     return saved;
   }
@@ -163,7 +172,7 @@ class TaskService {
   // ─── Consultas ─────────────────────────────────────────────────
   get(guildId, id) {
     const task = this.store.getGuildTask(guildId, Number(id));
-    if (!task) throw new UserError(`No existe la tarea #${id} en este servidor.`, 'NOT_FOUND');
+    if (!task) throw new UserError(`Task not found: #${id} in this server.`, 'NOT_FOUND');
     return task;
   }
 
@@ -185,7 +194,7 @@ class TaskService {
         try {
           members = await this.gateway.getRoleMembers(task.guildId, task.roleId);
         } catch (err) {
-          this.log?.warn(`No se pudieron obtener los miembros del rol ${task.roleId}: ${err.message}`);
+          this.log?.warn(`No se pudieron obtener los miembros del role ${task.roleId}: ${err.message}`);
           members = null;
         }
         if (members) this.roleCache.set(key, members);
@@ -275,7 +284,7 @@ class TaskService {
       const has = Boolean(this.store.ledgerRow(task.id, userId, item.action));
       const should = item.status === 'verified';
       if (should && !has) {
-        this.store.addLedger({ guildId: task.guildId, userId, taskId: task.id, kind: item.action, amount: task.points[item.action] || 0, reason: `Tarea #${task.id}` });
+        this.store.addLedger({ guildId: task.guildId, userId, taskId: task.id, kind: item.action, amount: task.points[item.action] || 0, reason: `Task #${task.id}` });
       } else if (!should && has) {
         this.store.deleteLedger(task.id, userId, item.action);
       }
@@ -284,7 +293,7 @@ class TaskService {
     let completedNow = false;
     let uncompletedNow = false;
     if (p.complete && !wasComplete) {
-      this.store.addLedger({ guildId: task.guildId, userId, taskId: task.id, kind: 'bonus', amount: task.points.bonus || 0, reason: `Tarea #${task.id} completa` });
+      this.store.addLedger({ guildId: task.guildId, userId, taskId: task.id, kind: 'bonus', amount: task.points.bonus || 0, reason: `Task #${task.id} complete` });
       this.store.incMember(task.guildId, userId, 'completed', 1);
       this.store.adjustTrust(task.guildId, userId, (t) => applyTrust(t, 'task_completed'));
       completedNow = true;
@@ -311,7 +320,7 @@ class TaskService {
       try {
         await this.publisher.updateTask(task, await this.view(task));
       } catch (err) {
-        this.log?.warn(`No se pudo actualizar el mensaje de la tarea #${id}: ${err.message}`);
+        this.log?.warn(`No se pudo actualizar el mensaje de the task #${id}: ${err.message}`);
       }
     }
   }
@@ -319,8 +328,10 @@ class TaskService {
   // ─── Ciclo de vida ─────────────────────────────────────────────
   async close(guildId, id, { actor = null } = {}) {
     const task = this.get(guildId, id);
-    if (task.status !== 'active') throw new UserError(`La tarea #${id} ya está ${task.status === 'closed' ? 'cerrada' : 'cancelada'}.`, 'NOT_ACTIVE');
-    return this._close(task, actor);
+    if (task.status !== 'active') throw new UserError(`Task #${id} is already ${task.status === 'closed' ? 'closed' : 'cancelled'}.`, 'NOT_ACTIVE');
+    const result = await this._close(task, actor);
+    if (!result) throw new UserError('This task is already being closed.', 'NOT_ACTIVE');
+    return result;
   }
 
   async _close(task, actor) {
@@ -332,13 +343,13 @@ class TaskService {
       try {
         revoked = await this.recheck(task);
       } catch (err) {
-        this.log?.warn(`Recomprobación de la tarea #${task.id} falló: ${err.message}`);
+        this.log?.warn(`Recomprobación de the task #${task.id} falló: ${err.message}`);
       }
     }
     try {
       await this.refreshMetrics(task);
     } catch (err) {
-      this.log?.debug(`Métricas de la tarea #${task.id} no disponibles: ${err.message}`);
+      this.log?.debug(`Métricas de the task #${task.id} no disponibles: ${err.message}`);
     }
 
     const fresh = this.store.getTask(task.id);
@@ -369,20 +380,20 @@ class TaskService {
     try {
       await this.publisher.updateTask(closed, await this.view(closed));
     } catch (err) {
-      this.log?.warn(`No se pudo marcar como cerrada la tarea #${task.id} en Discord: ${err.message}`);
+      this.log?.warn(`No se pudo marcar como closed the task #${task.id} en Discord: ${err.message}`);
     }
     if (settings.report.enabled) {
       try {
         await this.publisher.sendReport(closed, summary, settings);
       } catch (err) {
-        this.log?.warn(`No se pudo enviar el informe de la tarea #${task.id}: ${err.message}`);
+        this.log?.warn(`No se pudo enviar el informe de the task #${task.id}: ${err.message}`);
       }
     }
     this.audit(
       task.guildId,
       'task',
       actor,
-      `Tarea #${task.id} cerrada: ${summary.completed.length} completaron, ${summary.notCompletedCount} no completaron (${summary.completionRate}%)`,
+      `Task #${task.id} closed: ${summary.completed.length} completed, ${summary.notCompletedCount} did not complete (${summary.completionRate}%)`,
       { taskId: task.id },
     );
     this.bus?.change(task.guildId, 'task', { taskId: task.id, closed: true });
@@ -392,15 +403,15 @@ class TaskService {
   async cancel(guildId, id, { actor = null } = {}) {
     const task = this.get(guildId, id);
     if (!this.store.transitionTask(task.id, 'active', 'cancelled', { closedAt: Date.now() })) {
-      throw new UserError(`La tarea #${id} no está activa.`, 'NOT_ACTIVE');
+      throw new UserError(`Task #${id} is not active.`, 'NOT_ACTIVE');
     }
     const t = this.store.getTask(task.id);
     try {
       await this.publisher.updateTask(t, await this.view(t));
     } catch (err) {
-      this.log?.warn(`No se pudo actualizar la tarea cancelada #${id}: ${err.message}`);
+      this.log?.warn(`No se pudo actualizar the task cancelled #${id}: ${err.message}`);
     }
-    this.audit(guildId, 'task', actor, `Tarea #${id} cancelada`, { taskId: task.id });
+    this.audit(guildId, 'task', actor, `Task #${id} cancelled`, { taskId: task.id });
     this.bus?.change(guildId, 'task', { taskId: task.id });
     return t;
   }
@@ -410,25 +421,25 @@ class TaskService {
     try {
       await this.publisher.deleteTaskMessage(task);
     } catch (err) {
-      this.log?.debug(`No se pudo borrar el mensaje de la tarea #${id}: ${err.message}`);
+      this.log?.debug(`No se pudo borrar el mensaje de the task #${id}: ${err.message}`);
     }
     this.store.deleteTask(task.id);
     this.dirty.delete(task.id);
-    this.audit(guildId, 'task', actor, `Tarea #${id} eliminada (con sus puntos y registros)`, { taskId: task.id });
+    this.audit(guildId, 'task', actor, `Task #${id} deleted (including its points and records)`, { taskId: task.id });
     this.bus?.change(guildId, 'task', { taskId: task.id, deleted: true });
     return true;
   }
 
   async extend(guildId, id, minutesInput, { actor = null } = {}) {
     const task = this.get(guildId, id);
-    if (task.status !== 'active') throw new UserError('Sólo se pueden extender tareas activas.', 'NOT_ACTIVE');
+    if (task.status !== 'active') throw new UserError('Only active tasks can be extended.', 'NOT_ACTIVE');
     const minutes = parseDuration(minutesInput);
-    if (!minutes) throw new UserError('Duración no válida.', 'BAD_DURATION');
+    if (!minutes) throw new UserError('Invalid duration.', 'BAD_DURATION');
     const base = Math.max(task.endsAt, Date.now());
     const endsAt = Math.min(base + minutes * 60_000, task.createdAt + 30 * 86400_000);
     const t = this.store.updateTask(task.id, { endsAt, remindedAt: null });
     this.markDirty(task.id);
-    this.audit(guildId, 'task', actor, `Tarea #${id} extendida ${minutes} min`, { taskId: task.id });
+    this.audit(guildId, 'task', actor, `Task #${id} extended by ${minutes} min`, { taskId: task.id });
     this.bus?.change(guildId, 'task', { taskId: task.id });
     return t;
   }
@@ -436,11 +447,11 @@ class TaskService {
   /** Recuerda la tarea a quienes aún no la completaron. */
   async remind(guildId, id, { actor = null, manual = true } = {}) {
     const task = this.get(guildId, id);
-    if (!this.isOpen(task)) throw new UserError('La tarea ya terminó.', 'NOT_ACTIVE');
+    if (!this.isOpen(task)) throw new UserError('The task has ended.', 'NOT_ACTIVE');
     if (manual) {
       const last = this.lastManualReminder.get(task.id);
       if (last && Date.now() - last < 5 * 60_000) {
-        throw new UserError('Ya se envió un recordatorio hace menos de 5 minutos.', 'COOLDOWN');
+        throw new UserError('A reminder was already sent less than 5 minutes ago.', 'COOLDOWN');
       }
       this.lastManualReminder.set(task.id, Date.now());
     }
@@ -449,7 +460,7 @@ class TaskService {
     const settings = this.store.getSettings(guildId);
     const result = await this.publisher.sendReminder(task, targets, settings.reminders.mode, settings);
     this.store.updateTask(task.id, { remindedAt: Date.now() });
-    this.audit(guildId, 'reminder', actor, `Recordatorio de la tarea #${task.id} a ${targets.length} miembros`, { taskId: task.id });
+    this.audit(guildId, 'reminder', actor, `Task #${task.id}: reminder sent to ${targets.length} members`, { taskId: task.id });
     this.bus?.change(guildId, 'task', { taskId: task.id });
     return { targets: targets.length, ...result };
   }
@@ -465,13 +476,13 @@ class TaskService {
       } catch (err) {
         if (err instanceof XError && err.code === 'NOT_FOUND') {
           this.store.db.transaction(() => {
-            this.store.setSubmissionStatus(s.id, { status: 'revoked', reason: 'El post fue eliminado después de verificarse' });
+            this.store.setSubmissionStatus(s.id, { status: 'revoked', reason: 'The post was deleted after verification' });
             this.store.incMember(task.guildId, s.userId, 'rejected', 1);
             this.store.adjustTrust(task.guildId, s.userId, (t) => applyTrust(t, 'revoked'));
             this.syncUserTask(task, s.userId);
           });
           revoked += 1;
-          this.audit(task.guildId, 'fraud', null, `Tarea #${task.id}: se revocó el ${s.action === 'reply' ? 'comentario' : 'post citado'} de <@${s.userId}> (fue eliminado)`, {
+          this.audit(task.guildId, 'fraud', null, `Task #${task.id}: revoked the ${s.action === 'reply' ? 'reply' : 'quoted post'} by <@${s.userId}> (deleted)`, {
             taskId: task.id,
             userId: s.userId,
           });
@@ -489,7 +500,7 @@ class TaskService {
     const prevFlags = JSON.stringify(task.flags || []);
     this.store.updateTask(task.id, { metricsLast: tweet.metrics, metricsCheckedAt: Date.now(), flags });
     if (JSON.stringify(flags) !== prevFlags && flags.length) {
-      for (const f of flags) this.audit(task.guildId, 'fraud', null, `Tarea #${task.id}: ${f.message}`, { taskId: task.id });
+      for (const f of flags) this.audit(task.guildId, 'fraud', null, `Task #${task.id}: ${f.message}`, { taskId: task.id });
     }
     return { metrics: tweet.metrics, flags };
   }

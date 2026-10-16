@@ -34,11 +34,11 @@ const STATUS_ICON = {
   error: '⚠️',
 };
 const METHOD_LABEL = {
-  auto: 'comprobado en X',
-  timeline: 'visto en tu perfil',
-  declared: 'declarado',
-  screenshot: 'con captura',
-  manual: 'marcado por el staff',
+  auto: 'verified on X',
+  timeline: 'found on your profile',
+  declared: 'declared',
+  screenshot: 'screenshot provided',
+  manual: 'marked by staff',
 };
 
 // ─── Utilidades de formato ───────────────────────────────────────
@@ -78,9 +78,9 @@ function mentionList(users, max = 1000, fmt = (u) => `<@${u.id}>`) {
   for (let i = 0; i < users.length; i++) {
     const s = fmt(users[i]);
     const rest = users.length - i;
-    const suffix = rest > 1 ? ` … y ${rest} más` : '';
+    const suffix = rest > 1 ? ` … and ${rest} more` : '';
     if (len + s.length + 2 + suffix.length > max) {
-      parts.push(`… y ${rest} más`);
+      parts.push(`… and ${rest} more`);
       break;
     }
     parts.push(s);
@@ -106,11 +106,11 @@ function ephemeral(payload) {
   return { ...payload, flags: EPHEMERAL };
 }
 
-function errorMessage(text, { title = 'No se pudo completar' } = {}) {
+function errorMessage(text, { title = 'Could not complete the action' } = {}) {
   return ephemeral({ embeds: [embed({ color: COLORS.error, title: `❌ ${title}`, description: text })], components: [] });
 }
 
-function successMessage(text, { title = 'Listo' } = {}) {
+function successMessage(text, { title = 'Done' } = {}) {
   return ephemeral({ embeds: [embed({ color: COLORS.ok, title: `✅ ${title}`, description: text })], components: [] });
 }
 
@@ -125,30 +125,30 @@ function taskMessage(task, view) {
   const settings = view.settings;
   const active = task.status === 'active';
   const pts = taskPoints(task);
-  const statusText = active ? 'Activa' : task.status === 'closed' ? 'Finalizada' : 'Cancelada';
+  const statusText = active ? 'Active' : task.status === 'closed' ? 'Finished' : 'Cancelled';
   const color = active ? colorInt(settings?.embedColor) : task.status === 'closed' ? COLORS.grey : COLORS.error;
 
   const base = view.expectedCount ?? null;
   const progress =
     base !== null && base > 0
-      ? `${progressBar(view.completed / base)}  **${view.completed}/${base}** completaron (${pct(view.completed, base)}%)`
-      : `**${view.completed}** completaron · **${view.participants}** participando`;
+      ? `${progressBar(view.completed / base)}  **${view.completed}/${base}** completed (${pct(view.completed, base)}%)`
+      : `**${view.completed}** completed · **${view.participants}** participating`;
 
-  const steps = ['**1.** Pulsa los botones para hacer cada acción en X.', '**2.** Vuelve aquí y pulsa **✅ Ya lo hice**.'];
+  const steps = ['**1.** Use the buttons to complete each action on X.', '**2.** Come back and press **✅ I did it**.'];
   if (task.actions.includes('reply') || task.actions.includes('quote')) {
-    steps.push(`**3.** Pega el enlace de tu ${task.actions.includes('reply') ? 'comentario' : 'cita'} cuando el bot te lo pida.`);
+    steps.push(`**3.** Paste the link to your ${task.actions.includes('reply') ? 'reply' : 'quote'} when prompted by the bot.`);
   }
 
-  let description = quoteBlock(t.text || '(post sin texto)', 700);
-  if (t.media?.length > 1) description += `\n*+${t.media.length - 1} archivo(s) más en el post*`;
-  if (task.note) description += `\n\n📝 **Nota del staff:** ${escapeMd(truncate(task.note, 500))}`;
+  let description = quoteBlock(t.text || '(post without text)', 700);
+  if (t.media?.length > 1) description += `\n*+${t.media.length - 1} more file(s) in the post*`;
+  if (task.note) description += `\n\n📝 **Staff note:** ${escapeMd(truncate(task.note, 500))}`;
 
   const fields = [];
-  if (active) fields.push(field('🎯 Qué hacer', steps.join('\n')));
+  if (active) fields.push(field('🎯 What to do', steps.join('\n')));
   fields.push(
-    field(active ? '⏰ Termina' : '⏰ Terminó', `${discordTs(active ? task.endsAt : task.closedAt || task.endsAt, 'R')}\n${discordTs(active ? task.endsAt : task.closedAt || task.endsAt, 'f')}`, true),
-    field('🏆 Recompensa', `**${pts.total} pts**${pts.bonus ? `\n(${pts.base} + ${pts.bonus} de bonus)` : ''}`, true),
-    field('📊 Progreso', progress),
+    field(active ? '⏰ Ends' : '⏰ Ended', `${discordTs(active ? task.endsAt : task.closedAt || task.endsAt, 'R')}\n${discordTs(active ? task.endsAt : task.closedAt || task.endsAt, 'f')}`, true),
+    field('🏆 Reward', `**${pts.total} pts**${pts.bonus ? `\n(${pts.base} + ${pts.bonus} bonus)` : ''}`, true),
+    field('📊 Progress', progress),
   );
 
   const image = t.media?.find((m) => m.url)?.url;
@@ -157,12 +157,12 @@ function taskMessage(task, view) {
     author: author.handle
       ? { name: `${author.name || author.handle} (@${author.handle})`, url: profileUrl(author.handle), icon_url: author.avatar || undefined }
       : undefined,
-    title: `${active ? '🚀' : task.status === 'closed' ? '🏁' : '⛔'} Tarea #${task.id} · ${actionsLine(task.actions)}`,
+    title: `${active ? '🚀' : task.status === 'closed' ? '🏁' : '⛔'} Task #${task.id} · ${actionsLine(task.actions)}`,
     url: task.tweetUrl,
     description,
     fields,
     image: image ? { url: image } : undefined,
-    footer: { text: `${statusText} · ID ${task.id} · Verificación sin API de X` },
+    footer: { text: `${statusText} · ID ${task.id} · Verification without the X API` },
     timestamp: new Date(task.createdAt).toISOString(),
   });
 
@@ -170,30 +170,30 @@ function taskMessage(task, view) {
   if (active) {
     const links = task.actions.map((a) => {
       if (a === 'like') return button({ label: 'Like', emoji: '❤️', url: intents.like(task.tweetId) });
-      if (a === 'repost') return button({ label: 'Repostear', emoji: '🔁', url: intents.repost(task.tweetId) });
-      if (a === 'reply') return button({ label: 'Comentar', emoji: '💬', url: intents.reply(task.tweetId) });
-      return button({ label: 'Citar', emoji: '🗨️', url: intents.quote(task.tweetId, author.handle) });
+      if (a === 'repost') return button({ label: 'Repost', emoji: '🔁', url: intents.repost(task.tweetId) });
+      if (a === 'reply') return button({ label: 'Reply', emoji: '💬', url: intents.reply(task.tweetId) });
+      return button({ label: 'Quote', emoji: '🗨️', url: intents.quote(task.tweetId, author.handle) });
     });
-    links.push(button({ label: 'Abrir post', emoji: '🔗', url: task.tweetUrl }));
+    links.push(button({ label: 'Open post', emoji: '🔗', url: task.tweetUrl }));
     components.push(row(...links));
     components.push(
       row(
-        button({ id: `eng:verify:${task.id}`, label: 'Ya lo hice', style: 'success', emoji: '✅' }),
-        button({ id: `eng:progress:${task.id}`, label: 'Mi progreso', emoji: '📋' }),
-        button({ id: `eng:status:${task.id}`, label: 'Quién falta', emoji: '👥' }),
+        button({ id: `eng:verify:${task.id}`, label: 'I did it', style: 'success', emoji: '✅' }),
+        button({ id: `eng:progress:${task.id}`, label: 'My progress', emoji: '📋' }),
+        button({ id: `eng:status:${task.id}`, label: 'Participation', emoji: '👥' }),
       ),
     );
   } else {
     components.push(
       row(
-        button({ id: `eng:status:${task.id}`, label: task.status === 'closed' ? 'Ver resultados' : 'Ver participación', emoji: '📊' }),
-        button({ label: 'Abrir post', emoji: '🔗', url: task.tweetUrl }),
+        button({ id: `eng:status:${task.id}`, label: task.status === 'closed' ? 'View results' : 'View participation', emoji: '📊' }),
+        button({ label: 'Open post', emoji: '🔗', url: task.tweetUrl }),
       ),
     );
   }
 
   // Al editar no se toca el texto (así la mención del primer envío se conserva).
-  const content = active && task.pingRoleId && !task.messageId ? `<@&${task.pingRoleId}> ¡Nueva tarea de engagement! 🚀` : undefined;
+  const content = active && task.pingRoleId && !task.messageId ? `<@&${task.pingRoleId}> New engagement task! 🚀` : undefined;
   return {
     content,
     embeds: [e],
@@ -211,38 +211,38 @@ function progressMessage(task, progress, { results = null, completedNow = false,
     const info = ACTION_INFO[item.action];
     let detail;
     if (r) detail = r.message;
-    else if (item.status === 'verified') detail = `Hecho (${METHOD_LABEL[item.sub?.method] || 'verificado'})${item.sub?.quality != null ? ` · calidad ${item.sub.quality}/100` : ''}`;
-    else if (item.status === 'pending') detail = 'En revisión por el staff';
-    else if (item.status === 'awaiting') detail = `Falta tu captura: \`/prueba tarea:${task.id} accion:${item.action}\``;
-    else if (item.status === 'rejected' || item.status === 'revoked') detail = item.sub?.reason || 'Rechazado';
-    else detail = 'Pendiente';
+    else if (item.status === 'verified') detail = `Done (${METHOD_LABEL[item.sub?.method] || 'verified'})${item.sub?.quality != null ? ` · quality ${item.sub.quality}/100` : ''}`;
+    else if (item.status === 'pending') detail = 'Awaiting staff review';
+    else if (item.status === 'awaiting') detail = `Screenshot required: \`/proof task:${task.id} action:${item.action}\``;
+    else if (item.status === 'rejected' || item.status === 'revoked') detail = item.sub?.reason || 'Rejected';
+    else detail = 'Pending';
     return `${STATUS_ICON[status] || '⬜'} **${info.emoji} ${info.label}** — ${detail}`;
   });
 
   const anyRejected = (results || []).some((r) => r.state === 'rejected' || r.state === 'error' || r.state === 'missing');
   let color = COLORS.info;
-  let title = `📋 Tu progreso en la tarea #${task.id}`;
+  let title = `📋 Your progress on task #${task.id}`;
   if (completedNow) {
     color = COLORS.ok;
-    title = '🎉 ¡Tarea completada!';
+    title = '🎉 Task completed!';
   } else if (progress.complete) {
     color = COLORS.ok;
-    title = `✅ Tarea #${task.id} completada`;
+    title = `✅ Task #${task.id} completed`;
   } else if (anyRejected) {
     color = COLORS.error;
-    title = `⚠️ Tarea #${task.id}: falta algo`;
+    title = `⚠️ Task #${task.id}: some actions are missing`;
   } else if (progress.state === 'pending') {
     color = COLORS.warn;
-    title = `🕓 Tarea #${task.id}: en revisión`;
+    title = `🕓 Task #${task.id}: awaiting review`;
   }
 
-  const fields = [field('Progreso', `${progressBar(progress.done / (progress.total || 1), 10)}  **${progress.done}/${progress.total}**`, true)];
-  if (pointsEarned !== null) fields.push(field('Puntos en esta tarea', `**${fmtNum(pointsEarned)}**`, true));
+  const fields = [field('Progress', `${progressBar(progress.done / (progress.total || 1), 10)}  **${progress.done}/${progress.total}**`, true)];
+  if (pointsEarned !== null) fields.push(field('Points for this task', `**${fmtNum(pointsEarned)}**`, true));
 
   const components = [];
   const open = task.status === 'active' && task.endsAt > Date.now();
   if (open && !progress.complete && progress.state !== 'pending') {
-    components.push(row(button({ id: `eng:verify:${task.id}`, label: anyRejected ? 'Reintentar' : 'Ya lo hice', style: 'success', emoji: '✅' })));
+    components.push(row(button({ id: `eng:verify:${task.id}`, label: anyRejected ? 'Retry' : 'I did it', style: 'success', emoji: '✅' })));
   }
   return ephemeral({
     embeds: [
@@ -252,7 +252,7 @@ function progressMessage(task, progress, { results = null, completedNow = false,
         url: task.tweetUrl,
         description: lines.join('\n'),
         fields,
-        footer: open && !progress.complete ? { text: 'Si algo falló, corrígelo en X y vuelve a pulsar ✅' } : undefined,
+        footer: open && !progress.complete ? { text: 'If something failed, correct it on X and press ✅ again' } : undefined,
       }),
     ],
     components,
@@ -262,16 +262,16 @@ function progressMessage(task, progress, { results = null, completedNow = false,
 // ─── Quién hizo y quién no ──────────────────────────────────────
 function summaryFields(summary) {
   const fmtPartial = (u) => `<@${u.id}> (${u.done}/${u.total})`;
-  const fields = [field(`✅ Completaron (${summary.completed.length})`, mentionList(summary.completed))];
-  if (summary.pending.length) fields.push(field(`🕓 En revisión (${summary.pending.length})`, mentionList(summary.pending)));
-  if (summary.partial.length) fields.push(field(`⚠️ Incompleta (${summary.partial.length})`, mentionList(summary.partial, 1000, fmtPartial)));
-  if (summary.expectedCount !== null) fields.push(field(`❌ No participaron (${summary.missing.length})`, mentionList(summary.missing)));
+  const fields = [field(`✅ Completed (${summary.completed.length})`, mentionList(summary.completed))];
+  if (summary.pending.length) fields.push(field(`🕓 Awaiting review (${summary.pending.length})`, mentionList(summary.pending)));
+  if (summary.partial.length) fields.push(field(`⚠️ Incomplete (${summary.partial.length})`, mentionList(summary.partial, 1000, fmtPartial)));
+  if (summary.expectedCount !== null) fields.push(field(`❌ Did not participate (${summary.missing.length})`, mentionList(summary.missing)));
   return fields;
 }
 
 function expectedNote(task, summary) {
-  if (summary.expectedSource === 'role') return `Se esperaba la participación del rol <@&${task.roleId}> (${fmtNum(summary.expectedCount)} miembros).`;
-  if (summary.expectedSource === 'linked') return `Se compara con los ${fmtNum(summary.expectedCount)} miembros que tienen su cuenta de X vinculada.`;
+  if (summary.expectedSource === 'role') return `Expected participants: role <@&${task.roleId}> (${fmtNum(summary.expectedCount)} members).`;
+  if (summary.expectedSource === 'linked') return `Compared with the ${fmtNum(summary.expectedCount)} members with a linked X account.`;
   return '';
 }
 
@@ -281,14 +281,14 @@ function statusMessage(task, summary) {
     embeds: [
       embed({
         color: active ? COLORS.info : COLORS.grey,
-        title: `👥 Tarea #${task.id} — quién hizo y quién no`,
+        title: `👥 Task #${task.id} — participation status`,
         url: task.tweetUrl,
         description: [
-          `**${summary.completed.length}** ${summary.completed.length === 1 ? 'completó' : 'completaron'} · **${summary.pending.length}** en revisión · **${summary.partial.length}** ${summary.partial.length === 1 ? 'incompleta' : 'incompletas'}${
-            summary.expectedCount !== null ? ` · **${summary.missing.length}** sin participar` : ''
+          `**${summary.completed.length}** completed · **${summary.pending.length}** awaiting review · **${summary.partial.length}** incomplete${
+            summary.expectedCount !== null ? ` · **${summary.missing.length}** did not participate` : ''
           }`,
           expectedNote(task, summary),
-          active ? `Termina ${discordTs(task.endsAt, 'R')}.` : '',
+          active ? `Ends ${discordTs(task.endsAt, 'R')}.` : '',
         ]
           .filter(Boolean)
           .join('\n'),
@@ -303,33 +303,33 @@ function reportMessage(task, summary, settings, { guildId } = {}) {
   const perAction = task.actions
     .map((a) => {
       const pa = summary.perAction[a];
-      return `${ACTION_INFO[a].emoji} ${ACTION_INFO[a].label}: **${pa.verified}**${pa.pending ? ` (+${pa.pending} en revisión)` : ''}`;
+      return `${ACTION_INFO[a].emoji} ${ACTION_INFO[a].label}: **${pa.verified}**${pa.pending ? ` (+${pa.pending} awaiting review)` : ''}`;
     })
     .join('\n');
-  const stats = [`Participación: **${summary.completionRate}%**`, perAction];
-  if (summary.avgQuality !== null) stats.push(`Calidad media de comentarios: **${summary.avgQuality}/100**`);
-  const fields = [field('📈 Estadísticas', stats.join('\n')), ...summaryFields(summary)];
+  const stats = [`Participation: **${summary.completionRate}%**`, perAction];
+  if (summary.avgQuality !== null) stats.push(`Average reply quality: **${summary.avgQuality}/100**`);
+  const fields = [field('📈 Statistics', stats.join('\n')), ...summaryFields(summary)];
   const flags = task.flags || [];
   if (flags.length || task.report?.revoked) {
     const lines = flags.map((f) => `• ${f.message}`);
-    if (task.report?.revoked) lines.push(`• ${task.report.revoked} comentario(s) se borraron después de verificarse y se anularon.`);
-    fields.push(field('⚠️ Alertas antifraude', lines.join('\n')));
+    if (task.report?.revoked) lines.push(`• ${task.report.revoked} reply/replies were deleted after verification and revoked.`);
+    fields.push(field('⚠️ Integrity alerts', lines.join('\n')));
   }
 
   const payload = {
     embeds: [
       embed({
         color: COLORS.gold,
-        title: `📊 Resultado final — Tarea #${task.id}`,
+        title: `📊 Final report — Task #${task.id}`,
         url: task.tweetUrl,
         description: [
-          `**${summary.completed.length}** ${summary.completed.length === 1 ? 'miembro completó' : 'miembros completaron'} la tarea${summary.expectedCount !== null ? ` de **${summary.expectedCount}** ${summary.expectedCount === 1 ? 'esperado' : 'esperados'}` : ''}.`,
+          `**${summary.completed.length}** ${summary.completed.length === 1 ? 'member completed' : 'members completed'} the task${summary.expectedCount !== null ? ` out of **${summary.expectedCount}** ${summary.expectedCount === 1 ? 'expected' : 'expected'}` : ''}.`,
           expectedNote(task, summary),
         ]
           .filter(Boolean)
           .join('\n'),
         fields,
-        footer: { text: 'Informe generado automáticamente al terminar la tarea' },
+        footer: { text: 'Report generated automatically when the task ended' },
         timestamp: new Date().toISOString(),
       }),
     ],
@@ -337,12 +337,12 @@ function reportMessage(task, summary, settings, { guildId } = {}) {
     allowedMentions: { parse: [], users: [], roles: [] },
   };
   const url = messageUrl(guildId || task.guildId, task.channelId, task.messageId);
-  if (url) payload.components.push(row(button({ label: 'Ir a la tarea', emoji: '↩️', url })));
+  if (url) payload.components.push(row(button({ label: 'Go to task', emoji: '↩️', url })));
 
   if (settings.report.mentionMissing) {
     const targets = [...summary.missing, ...summary.partial].slice(0, 100);
     if (targets.length) {
-      payload.content = truncate(`❌ **No completaron la tarea #${task.id}:** ${targets.map((u) => `<@${u.id}>`).join(' ')}`, 2000);
+      payload.content = truncate(`❌ **Did not complete task #${task.id}:** ${targets.map((u) => `<@${u.id}>`).join(' ')}`, 2000);
       payload.allowedMentions = { parse: [], roles: [], users: targets.map((u) => u.id) };
     }
   }
@@ -353,7 +353,7 @@ function reportMessage(task, summary, settings, { guildId } = {}) {
 /** Divide las menciones en mensajes de ≤2000 caracteres y ≤100 menciones cada uno. */
 function reminderMessages(task, users, { guildId } = {}) {
   const url = messageUrl(guildId || task.guildId, task.channelId, task.messageId);
-  const header = `⏰ **Recordatorio:** la tarea **#${task.id}** termina ${discordTs(task.endsAt, 'R')}. Aún os falta completarla:`;
+  const header = `⏰ **Reminder:** the task **#${task.id}** ends ${discordTs(task.endsAt, 'R')}. Please complete the remaining actions:`;
   const chunks = [];
   let current = [];
   let len = header.length;
@@ -370,7 +370,7 @@ function reminderMessages(task, users, { guildId } = {}) {
   if (current.length) chunks.push(current);
   return chunks.slice(0, 5).map((ids, i) => ({
     content: `${i === 0 ? header : '⏰ …'} ${ids.map((id) => `<@${id}>`).join(' ')}`,
-    components: i === 0 && url ? [row(button({ label: 'Ir a la tarea', emoji: '🚀', url }))] : [],
+    components: i === 0 && url ? [row(button({ label: 'Go to task', emoji: '🚀', url }))] : [],
     allowedMentions: { parse: [], roles: [], users: ids },
   }));
 }
@@ -381,12 +381,12 @@ function reminderDM(task, guildName) {
     embeds: [
       embed({
         color: COLORS.warn,
-        title: `⏰ Te falta completar la tarea #${task.id}`,
-        description: `En **${escapeMd(guildName || 'tu servidor')}** hay una tarea de engagement que termina ${discordTs(task.endsAt, 'R')}.\n${actionsLine(task.actions)}`,
+        title: `⏰ Please complete task #${task.id}`,
+        description: `In **${escapeMd(guildName || 'your server')}** an engagement task ends ${discordTs(task.endsAt, 'R')}.\n${actionsLine(task.actions)}`,
         url: task.tweetUrl,
       }),
     ],
-    components: url ? [row(button({ label: 'Ir a la tarea', emoji: '🚀', url }))] : [],
+    components: url ? [row(button({ label: 'Go to task', emoji: '🚀', url }))] : [],
   };
 }
 
@@ -395,17 +395,18 @@ function reviewMessage(task, sub, user, imageUrl, { decided = null } = {}) {
   const info = ACTION_INFO[sub.action];
   const e = embed({
     color: decided ? (decided.approve ? COLORS.ok : COLORS.error) : COLORS.warn,
-    title: decided ? `${decided.approve ? '✅ Aprobado' : '❌ Rechazado'} · ${info.emoji} ${info.label}` : `🕵️ Revisión pendiente · ${info.emoji} ${info.label}`,
+    title: decided ? `${decided.approve ? '✅ Approved' : '❌ Rejected'} · ${info.emoji} ${info.label}` : `🕵️ Pending review · ${info.emoji} ${info.label}`,
     description: [
-      `**Miembro:** <@${sub.userId}>${user?.xHandle ? ` · [@${user.xHandle}](${profileUrl(user.xHandle)})` : ''}`,
-      `**Tarea:** [#${task.id}](${task.tweetUrl})`,
-      `**Tipo de prueba:** ${sub.method === 'screenshot' ? 'captura de pantalla' : 'declaración (sin captura)'}`,
-      decided ? `**Revisado por:** ${decided.by}${decided.reason ? `\n**Motivo:** ${escapeMd(decided.reason)}` : ''}` : '',
+      `**Member:** <@${sub.userId}>${user?.xHandle ? ` · [@${user.xHandle}](${profileUrl(user.xHandle)})` : ''}`,
+      `**Task:** [#${task.id}](${task.tweetUrl})`,
+      `**Evidence type:** ${sub.method === 'auto' ? 'Post verified on X · quality review' : sub.method === 'screenshot' ? 'screenshot' : 'declaration (no screenshot)'}`,
+      sub.method === 'auto' ? `**Quality estimate:** ${sub.quality}/100\n${quoteBlock(sub.evidenceText, 700)}\n[View evidence on X](${sub.evidenceUrl})` : '',
+      decided ? `**Reviewed by:** ${decided.by}${decided.reason ? `\n**Reason:** ${escapeMd(decided.reason)}` : ''}` : '',
     ]
       .filter(Boolean)
       .join('\n'),
     image: imageUrl ? { url: imageUrl } : undefined,
-    footer: { text: `Envío ${sub.id}` },
+    footer: { text: `Submission ${sub.id}` },
     timestamp: new Date(sub.updatedAt || Date.now()).toISOString(),
   });
   return {
@@ -414,8 +415,8 @@ function reviewMessage(task, sub, user, imageUrl, { decided = null } = {}) {
       ? []
       : [
           row(
-            button({ id: `eng:rev:ok:${sub.id}`, label: 'Aprobar', style: 'success', emoji: '✅' }),
-            button({ id: `eng:rev:no:${sub.id}`, label: 'Rechazar', style: 'danger', emoji: '✖️' }),
+            button({ id: `eng:rev:ok:${sub.id}`, label: 'Approve', style: 'success', emoji: '✅' }),
+            button({ id: `eng:rev:no:${sub.id}`, label: 'Reject', style: 'danger', emoji: '✖️' }),
           ),
         ],
     allowedMentions: { parse: [], users: [], roles: [] },
@@ -428,8 +429,8 @@ function reviewResultDM(task, sub, approve, reason) {
     embeds: [
       embed({
         color: approve ? COLORS.ok : COLORS.error,
-        title: approve ? `✅ Tu ${info.label.toLowerCase()} fue aprobado` : `❌ Tu ${info.label.toLowerCase()} fue rechazado`,
-        description: `Tarea [#${task.id}](${task.tweetUrl}).${!approve && reason ? `\n**Motivo:** ${escapeMd(reason)}` : ''}`,
+        title: approve ? `✅ Your ${info.label.toLowerCase()} was approved` : `❌ Your ${info.label.toLowerCase()} was rejected`,
+        description: `Task [#${task.id}](${task.tweetUrl}).${!approve && reason ? `\n**Reason:** ${escapeMd(reason)}` : ''}`,
       }),
     ],
   };
@@ -439,34 +440,34 @@ function reviewResultDM(task, sub, approve, reason) {
 function linkStartMessage({ handle, code, tweetIntent, expiresAt, allowUnverified }) {
   const components = [
     row(
-      button({ id: 'eng:link:bio', label: 'Verificar biografía', style: 'primary', emoji: '🔎' }),
-      button({ id: 'eng:link:tweet', label: 'Verificar con post', emoji: '🐦' }),
-      allowUnverified ? button({ id: 'eng:link:skip', label: 'Vincular sin verificar', emoji: '⏭️' }) : null,
+      button({ id: 'eng:link:bio', label: 'Verify bio', style: 'primary', emoji: '🔎' }),
+      button({ id: 'eng:link:tweet', label: 'Verify with post', emoji: '🐦' }),
+      allowUnverified ? button({ id: 'eng:link:skip', label: 'Link without verification', emoji: '⏭️' }) : null,
     ),
     row(
-      button({ label: 'Editar mi perfil de X', emoji: '✏️', url: 'https://x.com/settings/profile' }),
-      button({ label: 'Publicar el código', emoji: '📝', url: tweetIntent }),
+      button({ label: 'Edit my X profile', emoji: '✏️', url: 'https://x.com/settings/profile' }),
+      button({ label: 'Post the code', emoji: '📝', url: tweetIntent }),
     ),
   ];
   return ephemeral({
     embeds: [
       embed({
         color: COLORS.x,
-        title: '🔗 Vincula tu cuenta de X',
+        title: '🔗 Link your X account',
         description: [
-          `Vas a vincular **[@${handle}](${profileUrl(handle)})**. Demuestra que es tuya con una de estas opciones:`,
+          `You are linking **[@${handle}](${profileUrl(handle)})**. Prove you own it using either option:`,
           '',
-          '**Opción A · Biografía (recomendada)**',
-          `1. Copia este código: \`${code}\``,
-          '2. Pégalo en la **biografía** de tu perfil de X y guarda.',
-          '3. Pulsa **🔎 Verificar biografía**. Después ya puedes quitarlo.',
+          '**Option A · Bio (recommended)**',
+          `1. Copy this code: \`${code}\``,
+          '2. Paste it into your X profile **bio** and save.',
+          '3. Press **🔎 Verify bio**. You can then remove the code.',
           '',
-          '**Opción B · Post**',
-          '1. Pulsa **📝 Publicar el código** (se abre X con el texto listo) y publícalo.',
-          '2. Copia el enlace del post y pulsa **🐦 Verificar con post**.',
+          '**Option B · Post**',
+          '1. Press **📝 Post the code** and publish the prefilled post on X.',
+          '2. Copy the post link and press **🐦 Verify with post**.',
         ].join('\n'),
-        fields: [field('Código', `\`${code}\``, true), field('Caduca', discordTs(expiresAt, 'R'), true)],
-        footer: { text: 'Sólo se hace una vez · funciona en todos los servidores del bot' },
+        fields: [field('Code', `\`${code}\``, true), field('Expires', discordTs(expiresAt, 'R'), true)],
+        footer: { text: 'One-time setup · works across all servers using this bot' },
       }),
     ],
     components,
@@ -478,9 +479,9 @@ function linkedMessage(link) {
     embeds: [
       embed({
         color: COLORS.ok,
-        title: '✅ Cuenta de X vinculada',
-        description: `Tu Discord ahora está vinculado a **[@${link.handle}](${profileUrl(link.handle)})**${link.verified ? ' (verificada)' : ' (sin verificar)'}.\nYa puedes participar en las tareas: pulsa **✅ Ya lo hice** en cualquier tarea activa.${
-          link.protected ? '\n\n⚠️ Tu cuenta es **privada**: el bot no podrá ver tus comentarios. Hazla pública para que se verifiquen.' : ''
+        title: '✅ X account linked',
+        description: `Your Discord account is now linked to **[@${link.handle}](${profileUrl(link.handle)})**${link.verified ? ' (verified)' : ' (unverified)'}.\nYou can now participate: press **✅ I did it** on any active task.${
+          link.protected ? '\n\n⚠️ Your account is **private**. Make it public so the bot can verify your replies.' : ''
         }`,
         thumbnail: link.xAvatar ? { url: link.xAvatar } : undefined,
       }),
@@ -494,13 +495,13 @@ function needLinkMessage(unverified = false) {
     embeds: [
       embed({
         color: COLORS.warn,
-        title: unverified ? '🔒 Verifica tu cuenta de X' : '🔗 Primero vincula tu cuenta de X',
+        title: unverified ? '🔒 Verify your X account' : '🔗 Link your X account first',
         description: unverified
-          ? 'Tu cuenta está vinculada pero sin verificar. Pulsa el botón para verificarla (tarda 1 minuto).'
-          : 'Para comprobar tus interacciones necesito saber cuál es tu cuenta de X. Sólo se hace una vez.',
+          ? 'Your account is linked but unverified. Press the button to verify it (about 1 minute).'
+          : 'Link your X account so the bot can verify your interactions. You only need to do this once.',
       }),
     ],
-    components: [row(button({ id: 'eng:link:start', label: unverified ? 'Verificar mi cuenta' : 'Vincular mi cuenta', style: 'primary', emoji: '🔗' }))],
+    components: [row(button({ id: 'eng:link:start', label: unverified ? 'Verify my account' : 'Link my account', style: 'primary', emoji: '🔗' }))],
   });
 }
 
@@ -521,8 +522,8 @@ function verifyModal(task, needed) {
     components.push(
       textInput({
         id: 'reply',
-        label: 'Enlace de tu comentario',
-        description: 'En X abre tu respuesta › Compartir › Copiar enlace',
+        label: 'Your reply link',
+        description: 'On X, open your reply › Share › Copy link',
         placeholder: 'https://x.com/tuusuario/status/123…',
       }),
     );
@@ -531,36 +532,36 @@ function verifyModal(task, needed) {
     components.push(
       textInput({
         id: 'quote',
-        label: 'Enlace de tu cita',
-        description: 'El enlace de tu post citando la publicación',
+        label: 'Your quote link',
+        description: 'The link to your quote of the original post',
         placeholder: 'https://x.com/tuusuario/status/123…',
       }),
     );
   }
-  return { custom_id: `eng:m:verify:${task.id}`, title: truncate(`Verificar tarea #${task.id}`, 45), components };
+  return { custom_id: `eng:m:verify:${task.id}`, title: truncate(`Verify task #${task.id}`, 45), components };
 }
 
 function linkStartModal() {
   return {
     custom_id: 'eng:m:linkstart',
-    title: 'Vincular cuenta de X',
-    components: [textInput({ id: 'handle', label: 'Tu usuario de X', placeholder: '@tuusuario', max: 40, description: 'El @ de tu perfil de X' })],
+    title: 'Link X account',
+    components: [textInput({ id: 'handle', label: 'Your X username', placeholder: '@tuusuario', max: 40, description: 'Your X profile handle' })],
   };
 }
 
 function linkTweetModal() {
   return {
     custom_id: 'eng:m:linktweet',
-    title: 'Verificar con un post',
-    components: [textInput({ id: 'url', label: 'Enlace del post con el código', placeholder: 'https://x.com/tuusuario/status/123…' })],
+    title: 'Verify with a post',
+    components: [textInput({ id: 'url', label: 'Link to the post containing your code', placeholder: 'https://x.com/tuusuario/status/123…' })],
   };
 }
 
 function rejectModal(subId) {
   return {
     custom_id: `eng:m:reject:${subId}`,
-    title: 'Rechazar envío',
-    components: [textInput({ id: 'reason', label: 'Motivo (lo verá el miembro)', required: false, style: 2, max: 300, placeholder: 'La captura no muestra el like…' })],
+    title: 'Reject submission',
+    components: [textInput({ id: 'reason', label: 'Reason (visible to the member)', required: false, style: 2, max: 300, placeholder: 'The screenshot does not show a like…' })],
   };
 }
 
@@ -572,21 +573,21 @@ function profileMessage({ user, member, link, rank }) {
       embed({
         color: COLORS.info,
         author: { name: user.displayName || user.username, icon_url: user.avatar || undefined },
-        title: '📇 Perfil de engagement',
+        title: '📇 Engagement profile',
         thumbnail: link?.xAvatar ? { url: link.xAvatar } : undefined,
         fields: [
           field(
-            'Cuenta de X',
-            link ? `[@${link.handle}](${profileUrl(link.handle)}) ${link.verified ? '✅ verificada' : '⚠️ sin verificar'}` : 'No vinculada · usa `/vincular`',
+            'X account',
+            link ? `[@${link.handle}](${profileUrl(link.handle)}) ${link.verified ? '✅ verified' : '⚠️ unverified'}` : 'Not linked · use `/link`',
           ),
-          field('🏆 Puntos', `**${fmtNum(member?.points || 0)}**${rank ? ` · puesto #${rank}` : ''}`, true),
-          field(`${lvl.emoji} Confianza`, `**${member?.trust ?? 50}/100** · ${lvl.label}`, true),
-          field('🔥 Racha', `**${member?.streak || 0}** (mejor: ${member?.bestStreak || 0})`, true),
-          field('✅ Completadas', fmtNum(member?.completed || 0), true),
-          field('❌ No completadas', fmtNum(member?.missed || 0), true),
-          field('🚫 Rechazos', fmtNum(member?.rejected || 0), true),
+          field('🏆 Points', `**${fmtNum(member?.points || 0)}**${rank ? ` · rank #${rank}` : ''}`, true),
+          field(`${lvl.emoji} Trust`, `**${member?.trust ?? 50}/100** · ${lvl.label}`, true),
+          field('🔥 Streak', `**${member?.streak || 0}** (best: ${member?.bestStreak || 0})`, true),
+          field('✅ Completed', fmtNum(member?.completed || 0), true),
+          field('❌ Incomplete', fmtNum(member?.missed || 0), true),
+          field('🚫 Rejections', fmtNum(member?.rejected || 0), true),
         ],
-        footer: member?.blacklisted ? { text: '⛔ Bloqueado para participar en tareas' } : undefined,
+        footer: member?.blacklisted ? { text: '⛔ Blocked from participating in tasks' } : undefined,
       }),
     ],
     components: [],
@@ -604,7 +605,7 @@ function leaderboardMessage(rows, { title, guildName }) {
       embed({
         color: COLORS.gold,
         title: `🏆 ${title}`,
-        description: lines.length ? lines.join('\n') : 'Todavía no hay puntos en este periodo. ¡Participa en las tareas para aparecer aquí!',
+        description: lines.length ? lines.join('\n') : 'No points in this period yet. Participate in tasks to appear here!',
         footer: guildName ? { text: guildName } : undefined,
       }),
     ],
@@ -614,83 +615,84 @@ function leaderboardMessage(rows, { title, guildName }) {
 }
 
 function taskListMessage(tasks, { guildId, completedBy = new Map() } = {}) {
-  if (!tasks.length) return infoMessage('No hay tareas activas ahora mismo. ¡Vuelve más tarde!', { title: '📭 Sin tareas activas' });
+  if (!tasks.length) return infoMessage('No active tasks right now. Check back later!', { title: '📭 No active tasks' });
   const lines = tasks.slice(0, 15).map((t) => {
     const url = messageUrl(guildId || t.guildId, t.channelId, t.messageId);
     const who = t.tweet?.author?.handle ? `@${escapeMd(t.tweet.author.handle)}` : 'post';
     const done = completedBy.get(t.id);
-    return `${done ? '✅' : '▫️'} **[#${t.id}](${url || t.tweetUrl})** · ${who} · ${t.actions.map((a) => ACTION_INFO[a].emoji).join('')} · termina ${discordTs(t.endsAt, 'R')}`;
+    return `${done ? '✅' : '▫️'} **[#${t.id}](${url || t.tweetUrl})** · ${who} · ${t.actions.map((a) => ACTION_INFO[a].emoji).join('')} · ends ${discordTs(t.endsAt, 'R')}`;
   });
   return ephemeral({
     embeds: [
       embed({
         color: COLORS.info,
-        title: `📋 Tareas activas (${tasks.length})`,
-        description: lines.join('\n') + (tasks.length > 15 ? `\n… y ${tasks.length - 15} más` : ''),
-        footer: { text: '✅ = ya la completaste' },
+        title: `📋 Active tasks (${tasks.length})`,
+        description: lines.join('\n') + (tasks.length > 15 ? `\n… and ${tasks.length - 15} more` : ''),
+        footer: { text: '✅ = already completed' },
       }),
     ],
     components: [],
   });
 }
 
-function configMessage(s, { dashboardUrl } = {}) {
-  const ch = (id) => (id ? `<#${id}>` : '*sin configurar*');
-  const role = (id) => (id ? `<@&${id}>` : '*ninguno*');
+function configMessage(s) {
+  const ch = (id) => (id ? `<#${id}>` : '*not configured*');
+  const role = (id) => (id ? `<@&${id}>` : '*none*');
   const v = s.verification;
-  const proof = { declared: 'Declaración (confianza)', screenshot: 'Captura obligatoria', review: 'Revisión del staff' }[v.proofMode];
-  const components = dashboardUrl ? [row(button({ label: 'Abrir panel web', emoji: '🖥️', url: dashboardUrl }))] : [];
+  const proof = { declared: 'Declaration (trust)', screenshot: 'Screenshot required', review: 'Staff review' }[v.proofMode];
+  const components = [];
   return ephemeral({
     embeds: [
       embed({
         color: COLORS.info,
-        title: '⚙️ Configuración del servidor',
+        title: '⚙️ Server settings',
         fields: [
-          field('Canales', `Tareas: ${ch(s.tasksChannelId)}\nRegistro/revisión: ${ch(s.logChannelId)}\nInformes: ${s.report.channelId ? ch(s.report.channelId) : 'el mismo de la tarea'}`, true),
-          field('Roles', `Participantes: ${role(s.participantRoleId)}\nStaff: ${role(s.staffRoleId)}\nMencionar: ${role(s.pingRoleId)}`, true),
+          field('Channels', `Tasks: ${ch(s.tasksChannelId)}\nLog/review: ${ch(s.logChannelId)}\nReports: ${s.report.channelId ? ch(s.report.channelId) : 'task channel'}`, true),
+          field('Roles', `Participants: ${role(s.participantRoleId)}\nStaff: ${role(s.staffRoleId)}\nMention: ${role(s.pingRoleId)}`, true),
           field(
-            'Verificación',
-            `Like/Repost: **${proof}**\nRepost en perfil: ${v.repostTimelineCheck ? 'sí' : 'no'}\nCalidad mínima comentarios: **${v.minReplyQuality}/100**\nAntiplagio: ${v.antiDuplicate ? 'sí' : 'no'} · Recomprobar al cerrar: ${v.recheckOnClose ? 'sí' : 'no'}\nVinculación verificada: ${v.requireVerifiedLink ? 'obligatoria' : 'opcional'}`,
+            'Verification',
+            `Like/Repost: **${proof}**\nCheck public reposts: ${v.repostTimelineCheck ? 'yes' : 'no'}\nQuality review threshold: **${v.minReplyQuality}/100**\nCheck duplicates: ${v.antiDuplicate ? 'yes' : 'no'} · Recheck on close: ${v.recheckOnClose ? 'yes' : 'no'}\nVerified link: ${v.requireVerifiedLink ? 'required' : 'optional'}`,
           ),
-          field('Puntos', `❤️ ${s.points.like} · 🔁 ${s.points.repost} · 💬 ${s.points.reply} · 🗨️ ${s.points.quote} · bonus ${s.points.bonus}`, true),
-          field('Por defecto', `${actionsLine(s.defaultActions)}\nDuración: ${formatDuration(s.defaultDurationMinutes)}`, true),
-          field('Recordatorios', s.reminders.enabled ? `${s.reminders.minutesBefore} min antes · ${{ channel: 'en el canal', dm: 'por MD', both: 'canal + MD' }[s.reminders.mode]}` : 'desactivados', true),
+          field('Points', `❤️ ${s.points.like} · 🔁 ${s.points.repost} · 💬 ${s.points.reply} · 🗨️ ${s.points.quote} · bonus ${s.points.bonus}`, true),
+          field('Defaults', `${actionsLine(s.defaultActions)}\nDuration: ${formatDuration(s.defaultDurationMinutes)}`, true),
+          field('Reminders', s.reminders.enabled ? `${s.reminders.minutesBefore} min before · ${{ channel: 'channel', dm: 'DM', both: 'channel + DM' }[s.reminders.mode]}` : 'disabled', true),
         ],
-        footer: { text: 'Todo esto también se puede cambiar desde el panel web' },
+        footer: { text: 'Use /config to update these settings. Use /points to set rewards for future posts.' },
       }),
     ],
     components,
   });
 }
 
-function helpMessage({ staff, dashboardUrl }) {
+function helpMessage({ staff }) {
   const member = [
-    '`/vincular usuario` — vincula tu cuenta de X (una sola vez)',
-    '`/tareas` — tareas activas y cuáles te faltan',
-    '`/verificar tarea` — verifica una tarea (igual que el botón ✅)',
-    '`/prueba tarea accion imagen` — sube una captura como prueba',
-    '`/perfil [miembro]` — puntos, racha y confianza',
-    '`/ranking [periodo]` — clasificación del servidor',
-    '`/desvincular` — quita tu cuenta de X',
+    '`/link user` — link your X account (one-time setup)',
+    '`/tasks` — active tasks and your remaining tasks',
+    '`/verify task` — verify a task (same as the ✅ button)',
+    '`/proof task action image` — upload a screenshot as evidence',
+    '`/profile [member]` — points, streak and trust',
+    '`/ranking [period]` — server leaderboard',
+    '`/unlink` — unlink your X account',
   ];
   const staffCmds = [
-    '`/tarea crear enlace …` — publica una tarea nueva',
-    '`/tarea estado|cerrar|cancelar|recordar|extender` — gestiona tareas',
-    '`/miembro puntos|bloquear|desbloquear|vincular|desvincular`',
-    '`/config ver|canal|logs|rol-participantes|…` — ajustes',
-    '`/panel` — enlace al panel web',
+    '`/task create url …` — publish a new task',
+    '`/task status|close|cancel|remind|extend` — manage tasks',
+    '`/member points|block|unblock|link|unlink`',
+    '`/config view|channel|logs|participant-role|…` — settings',
+    '`/points like:2 reply:5 bonus:3` — default rewards for future posts (administrators)',
+    '`/task create url:… reply-points:10 bonus-points:5` — custom rewards for one post',
   ];
-  const fields = [field('👤 Para todos', member.join('\n'))];
+  const fields = [field('👤 Everyone', member.join('\n'))];
   if (staff) fields.push(field('🛡️ Staff', staffCmds.join('\n')));
   fields.push(
     field(
-      '¿Cómo se verifica sin la API de X?',
-      '💬 **Comentarios y citas:** se leen de X y se comprueba autor, destino, calidad y copias.\n🔁 **Reposts:** se buscan en tu perfil público.\n❤️ **Likes:** X los hizo privados, así que se usan declaración, captura o revisión (según el servidor) y se contrastan con el contador público del post.',
+      'How does verification work without the X API?',
+      '💬 **Replies and quotes:** checked on X for author, target and duplicate text. Low quality estimates go to staff review.\n🔁 **Reposts:** checked on your public profile.\n❤️ **Likes:** verified by declaration, screenshot or staff review, depending on server settings. Public counters provide a general audit.',
     ),
   );
   return ephemeral({
-    embeds: [embed({ color: COLORS.info, title: '📖 Ayuda del bot de engagement', fields })],
-    components: dashboardUrl && staff ? [row(button({ label: 'Panel web', emoji: '🖥️', url: dashboardUrl }))] : [],
+    embeds: [embed({ color: COLORS.info, title: '📖 Engagement bot help', fields })],
+    components: [],
   });
 }
 

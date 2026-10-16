@@ -51,7 +51,7 @@ function header(d) {
             <dt>${active ? 'Termina' : 'Terminó'}</dt><dd>${dateTime(active ? t.endsAt : t.closedAt || t.endsAt)} <span class="muted">(${active ? ago(t.endsAt) : `duró ${duration((t.closedAt || t.endsAt) - t.createdAt)}`})</span></dd>
             <dt>Puntos</dt><dd>${t.actions.map((a) => `${ACTIONS[a].emoji} ${t.points[a]}`).join(' · ')} · bonus ${t.points.bonus}</dd>
             <dt>Esperados</dt><dd>${t.roleId ? html`Rol <code>${roleName(t.roleId)}</code>` : 'Miembros con X vinculada'}</dd>
-            ${t.note ? html`<dt>Nota</dt><dd>${t.note}</dd>` : ''}
+            ${t.note ? html`<dt>Nota</dt><dd data-i18n-ignore>${t.note}</dd>` : ''}
             <dt>Discord</dt><dd>${d.messageUrl ? html`<a href="${d.messageUrl}" target="_blank" rel="noopener">Abrir mensaje ${icon('external')}</a>` : html`<span class="muted">sin mensaje</span>`}</dd>
           </dl>
           <div class="row mt">
@@ -131,7 +131,7 @@ function table(d) {
                   <td><div class="user-cell" data-act="member" data-uid="${r.id}" style="cursor:pointer">${avatar(r.avatar, r.name, 'sm')}<div class="who"><strong>${r.name || r.id}</strong><span>${r.xHandle ? `@${r.xHandle}` : 'sin X vinculada'}</span></div></div></td>
                   <td><span class="badge ${STATE[r.state].cls}">${STATE[r.state].label}${r.state !== 'none' ? ` ${r.done}/${r.total}` : ''}</span></td>
                   ${t.actions.map((a) => html`<td>${actionCell(r, a)}</td>`)}
-                  <td style="max-width:280px">${reply ? html`<div class="small ellipsis" title="${reply.evidenceText}">${reply.evidenceUrl ? html`<a href="${reply.evidenceUrl}" target="_blank" rel="noopener">${reply.evidenceText}</a>` : reply.evidenceText}</div><div class="small muted">${reply.quality != null ? `calidad ${reply.quality}/100` : ''}</div>` : html`<span class="muted small">—</span>`}</td>
+                  <td style="max-width:280px">${reply ? html`<div class="small ellipsis" data-i18n-ignore title="${reply.evidenceText}">${reply.evidenceUrl ? html`<a href="${reply.evidenceUrl}" target="_blank" rel="noopener">${reply.evidenceText}</a>` : reply.evidenceText}</div><div class="small muted">${reply.quality != null ? `calidad ${reply.quality}/100` : ''}</div>` : html`<span class="muted small">—</span>`}</td>
                   <td class="num">${num(r.points)}</td>
                 </tr>`;
               })}</tbody></table></div>

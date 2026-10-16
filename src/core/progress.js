@@ -123,7 +123,7 @@ function computeFlags(task, subs, start, last) {
         action,
         claimed,
         delta,
-        message: `${claimed} miembros registraron ${label}, pero el contador público sólo subió ${delta}.`,
+        message: `${claimed} members recorded ${label}, but the public counter only increased by ${delta}.`,
       });
     }
   };

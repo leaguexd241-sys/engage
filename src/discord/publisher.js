@@ -37,7 +37,7 @@ class DiscordPublisher {
       if (isUnknownMessage(err)) {
         // Alguien borró el mensaje: dejamos de intentar editarlo.
         this.store.updateTask(task.id, { messageId: null });
-        this.log.warn(`El mensaje de la tarea #${task.id} ya no existe en Discord.`);
+        this.log.warn(`El mensaje de the task #${task.id} ya no existe en Discord.`);
         return;
       }
       throw err;

@@ -1,7 +1,7 @@
 'use strict';
 
 const { XError } = require('../errors');
-const { httpGet, parseJson } = require('../http');
+const { httpGet, parseJson, retryAfterMs } = require('../http');
 const { stripLeadingMentions } = require('../../util/text');
 const { tweetUrl } = require('../urls');
 
@@ -86,9 +86,9 @@ function createSyndicationProvider({ timeoutMs, userAgent, fetchImpl } = {}) {
     const url = `https://cdn.syndication.twimg.com/tweet-result?id=${id}&token=${syndicationToken(id)}&lang=es`;
     const res = await httpGet(url, opts);
     if (res.status === 404) throw new XError('NOT_FOUND', 'El post no existe o fue eliminado');
-    if (res.status === 429) throw new XError('RATE_LIMITED', 'Límite de peticiones de X');
+    if (res.status === 429) throw new XError('RATE_LIMITED', 'Límite de peticiones de X', { retryAfterMs: retryAfterMs(res.headers) });
     if (res.status >= 400) throw new XError('UNAVAILABLE', `HTTP ${res.status}`);
-    if (!res.text.trim()) throw new XError('NOT_FOUND', 'El post no existe o no es público');
+    if (!res.text.trim()) throw new XError('UNAVAILABLE', 'X devolvió una respuesta vacía');
     const j = parseJson(res.text);
     if (!j) throw new XError('UNAVAILABLE', 'Respuesta no válida');
     if (j.__typename === 'TweetTombstone') {
@@ -96,7 +96,7 @@ function createSyndicationProvider({ timeoutMs, userAgent, fetchImpl } = {}) {
       if (/limits who can view|protected|protegid/i.test(reason)) throw new XError('PROTECTED', 'La cuenta es privada');
       throw new XError('NOT_FOUND', 'El post no está disponible');
     }
-    if (!j.id_str) throw new XError('NOT_FOUND', 'El post no está disponible');
+    if (!j.id_str) throw new XError('UNAVAILABLE', 'X no devolvió los datos del post');
     return normalizeTweet(j);
   }
 
@@ -104,7 +104,7 @@ function createSyndicationProvider({ timeoutMs, userAgent, fetchImpl } = {}) {
     const url = `https://syndication.twitter.com/srv/timeline-profile/screen-name/${encodeURIComponent(handle)}`;
     const res = await httpGet(url, { ...opts, accept: 'text/html' });
     if (res.status === 404) throw new XError('NOT_FOUND', 'Usuario no encontrado');
-    if (res.status === 429) throw new XError('RATE_LIMITED', 'Límite de peticiones de X');
+    if (res.status === 429) throw new XError('RATE_LIMITED', 'Límite de peticiones de X', { retryAfterMs: retryAfterMs(res.headers) });
     if (res.status >= 400) throw new XError('UNAVAILABLE', `HTTP ${res.status}`);
     const data = parseNextData(res.text);
     const timeline = data?.props?.pageProps?.timeline;

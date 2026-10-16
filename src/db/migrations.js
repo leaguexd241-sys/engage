@@ -144,6 +144,35 @@ const MIGRATIONS = [
     value TEXT
   );
   `,
+  `
+  -- Reconsider the latest automatic quality rejection for each submission.
+  -- Human decisions and other rejection reasons are left intact.
+  CREATE TEMP TABLE quality_review_recovery AS
+    SELECT id, guild_id, user_id, task_id FROM submissions
+    WHERE status = 'rejected' AND method = 'auto' AND reviewer_id IS NULL
+      AND action IN ('reply', 'quote') AND quality IS NOT NULL
+      AND evidence_url IS NOT NULL AND evidence_text IS NOT NULL
+      AND (reason LIKE 'Tu comentario tiene una calidad de %'
+        OR reason LIKE 'Tu cita tiene una calidad de %');
+
+  UPDATE members SET
+    trust = MIN(100, trust + 2 * (SELECT COUNT(*) FROM quality_review_recovery q WHERE q.guild_id = members.guild_id AND q.user_id = members.user_id)),
+    rejected = MAX(0, rejected - (SELECT COUNT(*) FROM quality_review_recovery q WHERE q.guild_id = members.guild_id AND q.user_id = members.user_id))
+    WHERE EXISTS (SELECT 1 FROM quality_review_recovery q WHERE q.guild_id = members.guild_id AND q.user_id = members.user_id);
+
+  UPDATE submissions SET status = 'pending', reason = NULL,
+    attempts = MAX(0, attempts - 1),
+    details = json_set(CASE WHEN json_valid(details) THEN details ELSE '{}' END, '$.qualityReview', json('true'), '$.legacyQualityRejection', json('true'))
+    WHERE id IN (SELECT id FROM quality_review_recovery);
+
+  INSERT INTO audit_log (guild_id, type, actor_name, message, data, created_at)
+    SELECT guild_id, 'review', 'System',
+      'Automatic quality rejection moved to staff review; the last quality penalty was restored.',
+      json_object('taskId', task_id, 'userId', user_id, 'submissionId', id),
+      unixepoch() * 1000
+    FROM quality_review_recovery;
+  DROP TABLE quality_review_recovery;
+  `,
 ];
 
 module.exports = { MIGRATIONS };

@@ -140,9 +140,10 @@ function renderAll() {
 
 /** Redibuja sólo las partes que cambiaron (así no se pierde lo que estás escribiendo). */
 async function refresh(force = false) {
-  if (!ctxRef) return;
+  const ctx = ctxRef;
+  if (!ctx) return;
   const s = await get(`/sim/state?user=${userId || ''}&channel=${channelId || ''}`);
-  if (!ctxRef) return;
+  if (ctxRef !== ctx || !ctx.isCurrent()) return;
   sim = s;
   userId = s.userId;
   channelId = s.channelId;
@@ -323,6 +324,7 @@ export default {
     });
     document.addEventListener('mousedown', outsidePalette);
     await refresh(true);
+    if (ctxRef !== ctx || !ctx.isCurrent()) return;
     clearInterval(pollTimer);
     pollTimer = setInterval(() => {
       if (!busy && !document.hidden) refresh().catch(() => {});

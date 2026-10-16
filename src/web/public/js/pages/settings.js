@@ -65,6 +65,7 @@ function markDirty() {
 }
 
 async function testQuality() {
+  const ctx = ctxRef;
   const text = $('#q-text')?.value || '';
   const out = $('#q-out');
   if (!out) return;
@@ -73,9 +74,10 @@ async function testQuality() {
     return;
   }
   const r = await post('/quality', { text, tweetText: $('#q-tweet').value });
+  if (!ctx || ctxRef !== ctx || !ctx.isCurrent() || !out.isConnected) return;
   const min = Number($('#settings-form').elements.minReplyQuality.value);
   const ok = r.score >= min;
-  out.innerHTML = String(html`<div class="alert ${ok ? 'success' : 'danger'}">${icon(ok ? 'check' : 'x')}<div><strong>${r.score}/100 · ${r.grade.label}</strong> — ${ok ? 'se aceptaría' : `se rechazaría (mínimo ${min})`}<div class="small text-2">${r.notes.join(' · ') || 'Sin observaciones'} · ${r.stats.words} palabras</div></div></div>`);
+  out.innerHTML = String(html`<div class="alert ${ok ? 'success' : 'warning'}">${icon(ok ? 'check' : 'info')}<div><strong>${r.score}/100 · ${r.grade.label}</strong> — ${ok ? 'se aceptaría' : `revisión del staff (umbral ${min})`}<div class="small text-2">${r.notes.join(' · ') || 'Sin observaciones'} · ${r.stats.words} palabras</div></div></div>`);
 }
 
 const page = {
@@ -128,7 +130,7 @@ const page = {
               </div>
               <div class="field"><label>Aprobar solas las capturas/declaraciones con confianza ≥ <strong id="t-val">${v.autoApproveTrust}</strong></label><input type="range" min="0" max="101" name="autoApproveTrust" value="${v.autoApproveTrust}" data-input="dirty" /><span class="hint">101 = nunca aprobar automáticamente.</span></div>
               ${sw('repostTimelineCheck', v.repostTimelineCheck, 'Buscar los reposts en el perfil público', 'Si se encuentran, cuentan como comprobados (más fiable que una declaración).')}
-              <div class="field"><label>Calidad mínima de los comentarios: <strong id="q-val">${v.minReplyQuality}</strong>/100</label><input type="range" min="0" max="100" name="minReplyQuality" value="${v.minReplyQuality}" data-input="dirty" /><span class="hint">Recomendado 35: rechaza “gm”, “🔥🔥”, “buen post” y spam, pero acepta frases normales.</span></div>
+              <div class="field"><label>Umbral de revisión de comentarios: <strong id="q-val">${v.minReplyQuality}</strong>/100</label><input type="range" min="0" max="100" name="minReplyQuality" value="${v.minReplyQuality}" data-input="dirty" /><span class="hint">Por debajo del umbral, el staff revisa el comentario. La puntuación automática no resta puntos, confianza ni intentos.</span></div>
               <div class="card" style="padding:12px;background:var(--surface-2)">
                 <div class="label" style="margin-bottom:8px">${icon('zap')} Prueba el analizador de calidad</div>
                 <div class="form-grid"><div class="field"><textarea class="input" id="q-text" placeholder="Escribe un comentario de ejemplo…" data-input="quality" style="min-height:64px"></textarea></div><div class="field"><textarea class="input" id="q-tweet" placeholder="(Opcional) texto del post original, para medir la relación" data-input="quality" style="min-height:64px"></textarea></div></div>

@@ -26,7 +26,7 @@ class XService {
     this.cache = new LruCache({ max: 2000, ttlMs: TTL.tweet });
     this.inflight = new Map();
     this.health = new Map();
-    for (const p of this.providers) this.health.set(p.name, { ok: 0, fail: 0, lastOk: null, lastError: null, lastErrorAt: null });
+    for (const p of this.providers) this.health.set(p.name, { ok: 0, fail: 0, lastOk: null, lastError: null, lastErrorAt: null, lastErrorCode: null, lastState: 'untested' });
   }
 
   static fromConfig(config, logger, { mock = null } = {}) {
@@ -34,7 +34,7 @@ class XService {
     const factories = { fxtwitter: createFxTwitterProvider, syndication: createSyndicationProvider };
     const providers = [];
     if (mock) providers.push(mock.provider);
-    for (const name of config.twitter.providers) {
+    for (const name of mock ? [] : config.twitter.providers) {
       if (factories[name]) providers.push(factories[name](opts));
     }
     return new XService({ providers, logger, concurrency: config.twitter.concurrency });
@@ -46,10 +46,13 @@ class XService {
     if (ok) {
       h.ok += 1;
       h.lastOk = Date.now();
+      h.lastState = 'ok';
     } else {
       h.fail += 1;
       h.lastError = err?.message || String(err);
       h.lastErrorAt = Date.now();
+      h.lastErrorCode = err?.code || 'UNAVAILABLE';
+      h.lastState = 'error';
     }
   }
 
@@ -88,10 +91,11 @@ class XService {
     let best = null;
     for (const p of this.providers) {
       if (typeof p[method] !== 'function') continue;
-      const pauseKey = `${p.name}:${method}`;
+      // Profile and timeline requests can share the same upstream quota.
+      const pauseKey = p.name;
       const paused = this.pausedUntil.get(pauseKey);
       if (paused && paused > Date.now()) {
-        if (!best || PRIORITY.RATE_LIMITED > PRIORITY[best.code]) best = new XError('RATE_LIMITED', 'Fuente en pausa por límite de peticiones');
+        if (!best || PRIORITY.RATE_LIMITED > PRIORITY[best.code]) best = new XError('RATE_LIMITED', 'Fuente en pausa por límite de peticiones', { retryAt: paused });
         continue;
       }
       try {
@@ -102,8 +106,10 @@ class XService {
         const e = err instanceof XError ? err : new XError('UNAVAILABLE', err?.message || String(err));
         if (e.code === 'NOT_HANDLED') continue;
         if (e.code === 'RATE_LIMITED') {
-          this.pausedUntil.set(pauseKey, Date.now() + this.rateLimitPauseMs);
-          this.log?.warn(`[${p.name}] pidió esperar (límite de peticiones): se pausa ${Math.round(this.rateLimitPauseMs / 60000)} min para ${method}.`);
+          const pauseMs = Math.max(1000, e.retryAfterMs ?? this.rateLimitPauseMs);
+          e.retryAt = Date.now() + pauseMs;
+          this.pausedUntil.set(pauseKey, e.retryAt);
+          this.log?.warn(`[${p.name}] Rate limited; retry after ${Math.ceil(pauseMs / 1000)} seconds.`);
         }
         if (e.code === 'UNAVAILABLE' || e.code === 'RATE_LIMITED') {
           this._record(p.name, false, e);
@@ -152,11 +158,18 @@ class XService {
 
   status() {
     const now = Date.now();
+    const stateFor = (provider) => {
+      const health = this.health.get(provider.name);
+      if ((this.pausedUntil.get(provider.name) || 0) > now) return 'rate_limited';
+      if (health?.lastState === 'error') return health.lastErrorCode === 'RATE_LIMITED' ? 'retry_ready' : 'unavailable';
+      return health?.lastState || 'untested';
+    };
     return {
       providers: this.providers.map((p) => ({
         name: p.name,
         ...(this.health.get(p.name) || {}),
-        paused: [...this.pausedUntil].filter(([k, until]) => k.startsWith(`${p.name}:`) && until > now).map(([k, until]) => ({ method: k.split(':')[1], until })),
+        paused: [...this.pausedUntil].filter(([k, until]) => k === p.name && until > now).map(([, until]) => ({ method: 'all', until })),
+        state: stateFor(p),
       })),
       cacheSize: this.cache.size,
       inflight: this.inflight.size,
@@ -166,6 +179,7 @@ class XService {
 
   prune() {
     this.cache.prune();
+    for (const [key, until] of this.pausedUntil) if (until <= Date.now()) this.pausedUntil.delete(key);
   }
 }
 

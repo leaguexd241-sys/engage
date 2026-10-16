@@ -11,13 +11,13 @@ const KIND = { like: '❤️ Like', repost: '🔁 Repost', reply: '💬 Comentar
 function render() {
   const ctx = ctxRef;
   const { member: m, link, rank, submissions, ledger } = data;
-  setTitle(m.displayName || m.username || m.userId, 'Ficha del miembro');
+  setTitle(m.displayName || m.username || m.userId, 'Ficha del miembro', { literalTitle: true });
   ctx.view.innerHTML = String(html`
     <div class="row" style="margin-bottom:12px"><a class="btn ghost sm" href="#/g/${state.guildId}/miembros">← Miembros</a></div>
     <div class="card"><div class="card-body row" style="gap:16px;align-items:flex-start">
       ${avatar(m.avatar, m.displayName, 'lg')}
       <div style="flex:1;min-width:220px">
-        <h2 style="font-size:20px">${m.displayName || m.username} ${m.blacklisted ? html`<span class="badge danger">${icon('ban')} Bloqueado</span>` : ''}</h2>
+        <h2 style="font-size:20px"><span data-i18n-ignore>${m.displayName || m.username}</span> ${m.blacklisted ? html`<span class="badge danger">${icon('ban')} Bloqueado</span>` : ''}</h2>
         <div class="muted small">${m.username ? `@${m.username} · ` : ''}ID ${m.userId} · visto ${ago(m.lastActiveAt)}</div>
         <div class="row mt" style="gap:8px">
           ${link

@@ -22,10 +22,10 @@ function applyTrust(current, event) {
 
 function trustLevel(t) {
   const v = Number(t ?? 50);
-  if (v >= 85) return { key: 'elite', label: 'Élite', emoji: '💎' };
-  if (v >= 60) return { key: 'confiable', label: 'Confiable', emoji: '🟢' };
+  if (v >= 85) return { key: 'elite', label: 'Elite', emoji: '💎' };
+  if (v >= 60) return { key: 'confiable', label: 'Trusted', emoji: '🟢' };
   if (v >= 30) return { key: 'normal', label: 'Normal', emoji: '🟡' };
-  return { key: 'riesgo', label: 'Riesgo', emoji: '🔴' };
+  return { key: 'riesgo', label: 'At risk', emoji: '🔴' };
 }
 
 module.exports = { TRUST_DELTA, applyTrust, trustLevel };

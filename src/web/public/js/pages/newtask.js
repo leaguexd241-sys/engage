@@ -7,6 +7,7 @@ let ctxRef = null;
 let tweet = null;
 let previewTimer = null;
 let previewSeq = 0;
+let tweetSeq = 0;
 
 const DURATIONS = [
   ['15m', '15 minutos'],
@@ -59,6 +60,7 @@ function formValues(form) {
 }
 
 async function updatePreview() {
+  const ctx = ctxRef;
   const form = $('#new-task');
   if (!form) return;
   const seq = ++previewSeq;
@@ -70,7 +72,7 @@ async function updatePreview() {
   }
   try {
     const r = await post(`/guilds/${state.guildId}/tasks/preview`, { tweet, actions: v.actions, duration: v.duration, note: v.note, points: v.points, pingRoleId: v.pingRoleId });
-    if (seq !== previewSeq || !$('#preview')) return;
+    if (ctxRef !== ctx || !ctx?.isCurrent() || seq !== previewSeq || !$('#preview')) return;
     $('#preview').innerHTML = String(renderPayload(r.payload, mentionCtx(state.meta)));
   } catch (err) {
     if (seq === previewSeq && $('#preview')) $('#preview').innerHTML = String(html`<p class="small" style="color:var(--danger);padding:12px">${err.message}</p>`);
@@ -83,7 +85,10 @@ function schedulePreview() {
 }
 
 async function loadTweet(btn) {
+  const ctx = ctxRef;
+  const seq = ++tweetSeq;
   const form = $('#new-task');
+  if (!ctx || !form) return;
   const url = form.url.value.trim();
   if (!url) {
     form.url.classList.add('invalid');
@@ -94,12 +99,14 @@ async function loadTweet(btn) {
   await withBusy(btn, async () => {
     try {
       const r = await post('/tweet-preview', { url });
+      if (ctxRef !== ctx || !ctx.isCurrent() || seq !== tweetSeq || !form.isConnected) return;
       tweet = r.tweet;
       $('#tweet-box').innerHTML = String(tweetCard(tweet));
       $('#submit-btn').disabled = false;
       $('#submit-hint').textContent = 'Todo listo: revisa la vista previa y publica.';
       schedulePreview();
     } catch (err) {
+      if (ctxRef !== ctx || !ctx.isCurrent() || seq !== tweetSeq || !form.isConnected) return;
       tweet = null;
       $('#tweet-box').innerHTML = String(html`<div class="alert danger">${icon('alert')}<span>${err.message}</span></div>`);
       $('#submit-btn').disabled = true;
@@ -134,7 +141,7 @@ export default {
 
           <div class="card"><div class="card-head"><h2>2 · Qué deben hacer</h2></div><div class="card-body stack">
             <div class="chips">${Object.entries(ACTIONS).map(([k, a]) => html`<label class="chip-toggle"><input type="checkbox" name="actions" value="${k}" data-change="preview" ${s.defaultActions.includes(k) ? 'checked' : ''} />${a.emoji} ${a.label}</label>`)}</div>
-            <div class="alert info small">${icon('info')}<span><strong>Comentarios y citas</strong> se verifican leyendo X (autor, destino, calidad y copias). <strong>Reposts</strong> se buscan en el perfil público. <strong>Likes</strong> son privados en X desde 2024: se aceptan según el modo de verificación de Ajustes.</span></div>
+            <div class="alert info small">${icon('info')}<span>Comentarios y citas se verifican leyendo X (autor, destino, calidad y copias). Reposts se buscan en el perfil público. Likes son privados en X desde 2024: se aceptan según el modo de verificación de Ajustes.</span></div>
             <div class="form-grid">
               <div class="field"><label for="duration">Duración</label>
                 <select class="input" id="duration" name="duration" data-change="duration">${DURATIONS.map(([v, l]) => html`<option value="${v}" ${v === pickDefault(s.defaultDurationMinutes) ? 'selected' : ''}>${l}</option>`)}<option value="custom" ${pickDefault(s.defaultDurationMinutes) === 'custom' ? 'selected' : ''}>Personalizada…</option></select>
@@ -205,6 +212,8 @@ export default {
   },
   destroy() {
     clearTimeout(previewTimer);
+    previewSeq++;
+    tweetSeq++;
     ctxRef = null;
     tweet = null;
   },

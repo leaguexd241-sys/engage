@@ -1,5 +1,6 @@
 import { api, get, post, setUnauthorizedHandler } from './api.js';
-import { html, icon, esc, $, toast, avatar, disposeCharts, hideTip } from './ui.js';
+import { languageSelect, t } from './i18n.js';
+import { html, raw, icon, esc, $, toast, avatar, disposeCharts, hideTip } from './ui.js';
 import loginPage from './pages/login.js';
 import overviewPage from './pages/overview.js';
 import tasksPage from './pages/tasks.js';
@@ -71,10 +72,12 @@ function toggleTheme() {
 }
 
 // ─── Cabecera, barra lateral y avisos ─────────────────────────────
-export function setTitle(title, sub = '') {
+export function setTitle(title, sub = '', { literalTitle = false, literalSub = false } = {}) {
+  $('#page-title').toggleAttribute('data-i18n-ignore', literalTitle);
+  $('#page-sub').toggleAttribute('data-i18n-ignore', literalSub);
   $('#page-title').textContent = title;
   $('#page-sub').textContent = sub;
-  document.title = `${title} · Engage`;
+  document.title = `${literalTitle ? title : t(title)} · Engage`;
 }
 
 function botPill() {
@@ -89,6 +92,7 @@ function renderTopbar() {
   const actions = $('#topbar-actions');
   actions.innerHTML = String(html`
     ${botPill()}
+    ${raw(languageSelect())}
     <button class="icon-btn" data-act="theme" title="Cambiar tema" aria-label="Cambiar tema">${icon(currentTheme() === 'dark' ? 'sun' : 'moon')}</button>
     ${state.guildId ? html`<a class="btn primary" href="#${guildPath('tareas/nueva')}">${icon('plus')}<span class="lbl">Nueva tarea</span></a>` : ''}
   `);
@@ -103,13 +107,14 @@ function renderBanner() {
   } else if (b && b.kind === 'simulator' && state.session?.demo) {
     el.innerHTML = String(html`<div class="banner info">${icon('flask')}<div><strong>Modo demostración</strong><span class="text-2">Estás usando un servidor de Discord simulado con datos de ejemplo. Pruébalo todo en el <a href="#/simulador">Simulador</a>; nada de esto afecta a Discord ni a X.</span></div></div>`);
   } else if (b && b.kind === 'discord' && b.membersIntent === false) {
-    el.innerHTML = String(html`<div class="banner warning">${icon('alert')}<div><strong>Falta el intent “Server Members”</strong><span class="text-2">Sin él, el bot no puede listar los miembros de un rol y usa los miembros con X vinculada para saber quién falta. <a href="/docs/guia.html#portal" target="_blank">Cómo activarlo</a></span></div></div>`);
+    el.innerHTML = String(html`<div class="banner warning">${icon('alert')}<div><strong>${b.intentStatus?.portalEnabled === true ? 'Intent activado: actualizando la conexión' : b.intentStatus?.portalEnabled === false ? 'Discord indica que Server Members está desactivado' : 'Comprobando el intent Server Members'}</strong><span class="text-2">El bot comprueba el estado cada minuto y reconecta automáticamente al activarlo. Comprueba que lo activaste en la aplicación ${b.user?.id || ''}. <a href="#/estado">Ver estado</a></span></div></div>`);
   } else {
     el.innerHTML = '';
   }
 }
 
 function renderSidebar(activeNav) {
+  closeGuildMenu();
   const g = state.guilds.find((x) => x.id === state.guildId);
   const pending = g?.pendingReviews || 0;
   const item = (key, label, ic, href, extra = '') =>
@@ -153,10 +158,15 @@ export function guildIcon(g, size = '') {
   return html`<span class="guild-icon ${size}">${String(g?.name || '?').slice(0, 2).toUpperCase()}</span>`;
 }
 
+let guildMenuCleanup = null;
+function closeGuildMenu() {
+  guildMenuCleanup?.();
+  guildMenuCleanup = null;
+}
 function openGuildMenu() {
   const box = $('#guild-switch');
   if (box.querySelector('.menu')) {
-    box.querySelector('.menu').remove();
+    closeGuildMenu();
     return;
   }
   const menu = document.createElement('div');
@@ -169,18 +179,16 @@ function openGuildMenu() {
   box.appendChild(menu);
   const close = (e) => {
     if (!box.contains(e.target)) {
-      menu.remove();
-      document.removeEventListener('mousedown', close);
+      closeGuildMenu();
     }
   };
-  setTimeout(() => document.addEventListener('mousedown', close));
+  document.addEventListener('mousedown', close);
+  guildMenuCleanup = () => { menu.remove(); document.removeEventListener('mousedown', close); };
   menu.addEventListener('click', (e) => {
     const b = e.target.closest('[data-guild]');
     if (b) {
-      menu.remove();
-      document.removeEventListener('mousedown', close);
+      closeGuildMenu();
       const sub = parseHash().path.split('/')[3] || 'resumen';
-      state.guildId = b.dataset.guild;
       navigate(`/g/${b.dataset.guild}/${['tareas', 'revision', 'miembros', 'ranking', 'actividad', 'ajustes'].includes(sub) ? sub : 'resumen'}`);
     }
   });
@@ -215,7 +223,7 @@ function connectEvents() {
   });
   es.addEventListener('audit', (e) => {
     try {
-      state.page?.onAudit?.(JSON.parse(e.data));
+      Promise.resolve(state.page?.onAudit?.(JSON.parse(e.data))).catch(() => {});
     } catch {
       /* ignorar */
     }
@@ -239,8 +247,10 @@ function scheduleGuildRefresh() {
 export async function loadMeta(force = false) {
   if (!state.guildId) return null;
   if (!force && state.meta && state.meta.guild?.id === state.guildId) return state.meta;
-  state.meta = await get(`/guilds/${state.guildId}/meta`);
-  return state.meta;
+  const guildId = state.guildId;
+  const meta = await get(`/guilds/${guildId}/meta`);
+  if (state.guildId === guildId) state.meta = meta;
+  return meta;
 }
 
 async function refreshStatus() {
@@ -252,6 +262,12 @@ async function refreshStatus() {
     /* sin sesión o sin conexión */
   }
 }
+window.addEventListener('engage:status', refreshStatus);
+window.addEventListener('engage:language', () => {
+  const title = $('#page-title');
+  document.title = `${title.hasAttribute('data-i18n-ignore') ? title.textContent : t(title.textContent)} · Engage`;
+  Promise.resolve(state.page?.onLocale?.()).catch((err) => toast(err.message, 'error'));
+});
 
 // ─── Enrutado ─────────────────────────────────────────────────────
 let routeSeq = 0;
@@ -318,6 +334,12 @@ async function route() {
 }
 
 function showLogin(query) {
+  state.page?.destroy?.();
+  state.page = null;
+  disposeCharts();
+  closeGuildMenu();
+  clearInterval(statusTimer);
+  clearTimeout(guildRefreshTimer);
   $('#app').hidden = true;
   const box = $('#login');
   box.hidden = false;
@@ -385,9 +407,13 @@ setUnauthorizedHandler(() => {
 
 // ─── Arranque ─────────────────────────────────────────────────────
 let statusTimer = null;
+let bootSeq = 0;
 async function boot() {
+  const seq = ++bootSeq;
   try {
-    state.session = await api('/session');
+    const session = await api('/session');
+    if (seq !== bootSeq) return;
+    state.session = session;
   } catch (err) {
     document.body.innerHTML = `<div class="login"><div class="login-card"><h1>No se pudo conectar</h1><p class="muted">${esc(err.message)}</p><a class="btn primary" href="/">Reintentar</a></div></div>`;
     return;
@@ -397,11 +423,14 @@ async function boot() {
     return route();
   }
   try {
-    state.guilds = (await get('/guilds')).guilds;
+    const guilds = (await get('/guilds')).guilds;
+    if (seq !== bootSeq) return;
+    state.guilds = guilds;
   } catch {
     state.guilds = [];
   }
   await refreshStatus();
+  if (seq !== bootSeq) return;
   clearInterval(statusTimer);
   statusTimer = setInterval(refreshStatus, 30_000);
   if (!state.guildId && state.guilds[0]) state.guildId = state.guilds[0].id;

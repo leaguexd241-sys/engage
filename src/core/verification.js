@@ -43,13 +43,14 @@ class VerificationService {
     this.bus = bus;
     this.log = log;
     this.lock = new KeyedLock();
+    this.background = new Set();
     this.proofsDir = proofsDir;
     if (proofsDir) fs.mkdirSync(proofsDir, { recursive: true });
   }
 
   _fresh(taskRef) {
     const task = this.store.getTask(taskRef.id);
-    if (!task) throw new UserError('Esa tarea ya no existe.', 'NOT_FOUND');
+    if (!task) throw new UserError('That task no longer exists.', 'NOT_FOUND');
     return task;
   }
 
@@ -64,16 +65,16 @@ class VerificationService {
   }
 
   _checkAccess(task, user, settings) {
-    if (!this.tasks.isOpen(task)) throw new UserError(`La tarea #${task.id} ya terminó. ¡Atento a la próxima!`, 'CLOSED');
+    if (!this.tasks.isOpen(task)) throw new UserError(`Task #${task.id} has ended. Watch for the next one!`, 'CLOSED');
     const member = this.store.touchMember(task.guildId, user);
-    if (member.blacklisted) throw new UserError('No puedes participar en las tareas de este servidor. Habla con el staff si crees que es un error.', 'BLACKLISTED');
+    if (member.blacklisted) throw new UserError('You cannot participate in this server. Contact staff if you believe this is a mistake.', 'BLACKLISTED');
     const link = this.store.getLink(user.id);
     const v = settings.verification;
     if (v.requireLink && !link) {
-      throw new UserError('Primero vincula tu cuenta de X con `/vincular usuario:@tuusuario`. Sólo se hace una vez.', 'NO_LINK');
+      throw new UserError('First link your X account with `/link user:@tuusuario`. You only need to do this once.', 'NO_LINK');
     }
     if (v.requireLink && v.requireVerifiedLink && link && !link.verified) {
-      throw new UserError('Tu cuenta de X está vinculada pero sin verificar. Usa `/vincular` para verificarla con el código.', 'LINK_UNVERIFIED');
+      throw new UserError('Your X account is linked but unverified. Use `/link` to verify it with your code.', 'LINK_UNVERIFIED');
     }
     return { member, link };
   }
@@ -87,7 +88,7 @@ class VerificationService {
     const task = this._fresh(taskRef);
     const key = `${task.id}:${user.id}`;
     const res = await this.lock.run(key, () => this._verify(task, user, inputs));
-    if (res.busy) throw new UserError('Ya estoy revisando tu participación, espera unos segundos.', 'BUSY');
+    if (res.busy) throw new UserError('Your participation is already being checked. Please wait a few seconds.', 'BUSY');
     return res.value;
   }
 
@@ -103,20 +104,28 @@ class VerificationService {
     for (const action of task.actions) {
       const prev = existing.get(action);
       if (prev?.status === 'verified') {
-        results.push({ action, state: 'already', ok: true, message: 'Ya estaba verificado.' });
+        results.push({ action, state: 'already', ok: true, message: 'Already verified.' });
         continue;
       }
-      if (prev?.status === 'pending') {
-        results.push({ action, state: 'pending', ok: false, message: 'Pendiente de revisión por el staff.' });
+      if (prev?.status === 'pending' && !(prev.details?.qualityReview && inputs[action])) {
+        results.push({ action, state: 'pending', ok: false, message: 'Awaiting staff review.' });
         continue;
       }
       if (prev && (prev.status === 'rejected' || prev.status === 'revoked') && prev.attempts >= v.maxAttempts) {
-        results.push({ action, state: 'rejected', ok: false, message: `Agotaste los ${v.maxAttempts} intentos para esta acción. Pide ayuda al staff.` });
+        results.push({ action, state: 'rejected', ok: false, message: `You have used all ${v.maxAttempts} attempts for this action. Please ask staff for help.` });
         continue;
       }
 
       if (action === 'reply' || action === 'quote') {
         const r = await this._checkPost(task, user, link, action, inputs[action], settings);
+        if (prev?.status === 'pending' && prev.details?.qualityReview) {
+          if (r.write?.status === 'rejected') {
+            r.result = { action, state: 'pending', ok: false, message: `${r.result.message} Your earlier submission remains in staff review. No attempt was deducted.` };
+            r.write = r.trust = null;
+          } else if (r.write?.status === 'pending' && r.write.evidenceId === prev.evidenceId && r.write.evidenceText === prev.evidenceText) {
+            r.write = null;
+          }
+        }
         results.push(r.result);
         if (r.write) writes.push(r.write);
         if (r.trust) trustEvents.push(r.trust);
@@ -129,7 +138,7 @@ class VerificationService {
         if (found.found) {
           writes.push({ action, status: 'verified', method: 'timeline', evidenceId: found.item.id, evidenceUrl: null, details: { timelineId: found.item.id } });
           trustEvents.push('auto_verified');
-          results.push({ action, state: 'verified', ok: true, method: 'timeline', message: 'Repost encontrado en tu perfil público de X.' });
+          results.push({ action, state: 'verified', ok: true, method: 'timeline', message: 'Repost found on your public X profile.' });
           continue;
         }
       }
@@ -141,14 +150,14 @@ class VerificationService {
           state: 'verified',
           ok: true,
           method: 'declared',
-          message: v.proofMode === 'declared' ? 'Registrado.' : 'Aprobado automáticamente por tu nivel de confianza.',
+          message: v.proofMode === 'declared' ? 'Recorded.' : 'Approved automatically based on your trust level.',
         });
       } else if (v.proofMode === 'screenshot') {
         if (prev?.status !== 'awaiting') writes.push({ action, status: 'awaiting', method: 'screenshot', countAttempt: false });
-        results.push({ action, state: 'awaiting', ok: false, message: `Sube una captura con \`/prueba tarea:${task.id} accion:${action}\`.` });
+        results.push({ action, state: 'awaiting', ok: false, message: `Upload a screenshot with \`/proof task:${task.id} action:${action}\`.` });
       } else {
         writes.push({ action, status: 'pending', method: 'declared', countAttempt: false });
-        results.push({ action, state: 'pending', ok: false, message: 'Enviado al staff para revisión.' });
+        results.push({ action, state: 'pending', ok: false, message: 'Sent to staff for review.' });
       }
     }
 
@@ -156,6 +165,7 @@ class VerificationService {
     let reviewSubs = [];
     try {
       sync = this.store.db.transaction(() => {
+        this._checkAccess(this._fresh(task), user, settings);
         const saved = [];
         for (const w of writes) {
           saved.push(
@@ -175,7 +185,7 @@ class VerificationService {
       });
     } catch (err) {
       if (isUniqueEvidenceError(err)) {
-        throw new UserError('Ese post ya fue usado como prueba por otra participación.', 'EVIDENCE_USED');
+        throw new UserError('That post has already been used as evidence for another submission.', 'EVIDENCE_USED');
       }
       throw err;
     }
@@ -184,10 +194,10 @@ class VerificationService {
     this.bus?.change(task.guildId, 'submission', { taskId: task.id, userId: user.id });
     const name = user.displayName || user.username;
     if (sync.completedNow) {
-      this.tasks.audit(task.guildId, 'complete', { id: user.id, name }, `${name} completó la tarea #${task.id}`, { taskId: task.id, userId: user.id });
+      this.tasks.audit(task.guildId, 'complete', { id: user.id, name }, `${name} completed task #${task.id}`, { taskId: task.id, userId: user.id });
     }
     for (const r of results.filter((x) => x.state === 'rejected' && x.fresh)) {
-      this.tasks.audit(task.guildId, 'reject', { id: user.id, name }, `${name}: ${ACTION_INFO[r.action].label.toLowerCase()} rechazado en #${task.id} — ${r.reason || r.message}`, {
+      this.tasks.audit(task.guildId, 'reject', { id: user.id, name }, `${name}: ${ACTION_INFO[r.action].label.toLowerCase()} rejected on #${task.id} — ${r.reason || r.message}`, {
         taskId: task.id,
         userId: user.id,
       });
@@ -201,9 +211,9 @@ class VerificationService {
   /** Comprueba un comentario o una cita a partir del enlace que pega el usuario. */
   async _checkPost(task, user, link, action, urlInput, settings) {
     const v = settings.verification;
-    const label = action === 'reply' ? 'comentario' : 'cita';
+    const label = action === 'reply' ? 'reply' : 'quote';
     if (!urlInput || !String(urlInput).trim()) {
-      return { result: { action, state: 'missing', ok: false, message: `Pega el enlace de tu ${label} para verificarlo.` } };
+      return { result: { action, state: 'missing', ok: false, message: `Paste the link to your ${label} to verify it.` } };
     }
     const parsed = parseTweetUrl(urlInput);
     const reject = (reason, trust = null, extra = {}) => ({
@@ -211,18 +221,18 @@ class VerificationService {
       write: { action, status: 'rejected', method: 'auto', evidenceUrl: String(urlInput).slice(0, 300), reason, ...extra },
       trust,
     });
-    if (!parsed) return reject(`El enlace de tu ${label} no es un post de X válido.`);
-    if (parsed.id === task.tweetId) return reject(`Ese es el enlace del post de la tarea. Necesitamos el enlace de TU ${label}.`);
+    if (!parsed) return reject(`The link to your ${label} is not a valid X post.`);
+    if (parsed.id === task.tweetId) return reject(`That is the task post link. Please provide the link to YOUR ${label}.`);
 
     let post;
     try {
       post = await this.x.getTweet(parsed.id, { fresh: true });
     } catch (err) {
       if (err instanceof XError) {
-        if (err.code === 'NOT_FOUND') return reject(`No encontramos tu ${label}. ¿Está publicado? Si acabas de publicarlo, espera unos segundos.`);
-        if (err.code === 'PROTECTED') return reject('Tu cuenta de X es privada: hazla pública para poder verificar tus interacciones.');
+        if (err.code === 'NOT_FOUND') return reject(`We could not find your ${label}. Is it published? If you just posted it, wait a few seconds.`);
+        if (err.code === 'PROTECTED') return reject('Your X account is private. Make it public so your interactions can be verified.');
         return {
-          result: { action, state: 'error', ok: false, message: 'X no respondió a tiempo. Vuelve a pulsar ✅ en un minuto (no perdiste ningún intento).' },
+          result: { action, state: 'error', ok: false, message: 'X is temporarily unavailable. Try ✅ again later. No attempts were deducted.' },
         };
       }
       throw err;
@@ -230,25 +240,26 @@ class VerificationService {
 
     const author = String(post.author.handle || '').toLowerCase();
     if (link && author !== link.handle.toLowerCase()) {
-      return reject(`Ese ${label} es de @${post.author.handle}, pero tu cuenta vinculada es @${link.handle}.`, 'wrong_account');
+      return reject(`That ${label} belongs to @${post.author.handle}, but your linked account is @${link.handle}.`, 'wrong_account');
     }
 
     if (action === 'reply') {
       let ok = post.replyTo?.id === task.tweetId;
       if (!ok && v.allowThreadReplies && post.replyTo?.id) ok = await this._inThread(post.replyTo.id, task.tweetId);
-      if (!ok) return reject('Ese post no es una respuesta al post de la tarea. Responde directamente al post.');
+      if (!ok) return reject('That post is not a reply to the task post. Reply directly to the original post.');
     } else if (post.quoteOf !== task.tweetId) {
-      return reject('Ese post no cita al post de la tarea. Usa el botón “Citar”.');
+      return reject('That post does not quote the task post. Use the Quote button on X.');
     }
 
     const q = analyzeReply(post.text, { tweetText: task.tweet?.text || '' });
     const details = { quality: q, author: post.author.handle, authorChecked: Boolean(link) };
+    // A heuristic cannot decide whether a real contribution is valuable. Keep the
+    // evidence for a human review without spending attempts or reducing trust.
     if (q.score < v.minReplyQuality) {
-      return reject(
-        `Tu ${label} tiene una calidad de ${q.score}/100 (mínimo ${v.minReplyQuality}). ${q.notes.slice(0, 2).join('. ')}. Escribe algo con más contenido y vuelve a intentarlo.`,
-        'rejected_quality',
-        { evidenceId: null, evidenceText: post.text.slice(0, 1000), quality: q.score, details },
-      );
+      return {
+        result: { action, state: 'pending', ok: false, quality: q.score, message: 'Your post was verified on X and sent to staff for a quality review. No points, trust or attempts were deducted. You can submit a revised post with /verify.' },
+        write: { action, status: 'pending', method: 'auto', evidenceUrl: post.url, evidenceId: post.id, evidenceText: post.text.slice(0, 1000), quality: q.score, countAttempt: false, details: { ...details, qualityReview: true, threshold: v.minReplyQuality } },
+      };
     }
 
     if (v.antiDuplicate) {
@@ -258,8 +269,8 @@ class VerificationService {
       ];
       const dup = findDuplicate(post.text, candidates, v.duplicateThreshold);
       if (dup) {
-        const why = dup.own ? 'Es casi igual a uno de tus comentarios anteriores' : 'Es casi igual al de otro miembro';
-        return reject(`${why} (${Math.round(dup.similarity * 100)}% de similitud). Escribe algo propio.`, 'duplicate', {
+        const why = dup.own ? 'It is almost identical to one of your previous replies' : 'It is almost identical to another member reply';
+        return reject(`${why} (${Math.round(dup.similarity * 100)}% similarity). Write an original reply.`, 'duplicate', {
           evidenceText: post.text.slice(0, 1000),
           quality: q.score,
           details: { ...details, duplicateOf: dup.userId, similarity: dup.similarity },
@@ -268,7 +279,7 @@ class VerificationService {
     }
 
     return {
-      result: { action, state: 'verified', ok: true, method: 'auto', quality: q.score, grade: q.grade.label, message: `Verificado ✓ Calidad ${q.score}/100 (${q.grade.label}).` },
+      result: { action, state: 'verified', ok: true, method: 'auto', quality: q.score, grade: q.grade.label, message: `Verified ✓ Quality ${q.score}/100 (${q.grade.label}).` },
       write: {
         action,
         status: 'verified',
@@ -301,10 +312,10 @@ class VerificationService {
   // ─── Capturas de pantalla ──────────────────────────────────────
   async _storeProof({ buffer: data, contentType }) {
     const ext = PROOF_TYPES[String(contentType || '').split(';')[0].trim().toLowerCase()];
-    if (!ext) throw new UserError('La prueba debe ser una imagen (PNG, JPG, WEBP o GIF).', 'BAD_PROOF');
-    if (!data || !data.length) throw new UserError('La imagen está vacía.', 'BAD_PROOF');
-    if (!looksLikeImage(data)) throw new UserError('El archivo no parece una imagen válida.', 'BAD_PROOF');
-    if (data.length > MAX_PROOF_BYTES) throw new UserError('La imagen supera 8 MB.', 'BAD_PROOF');
+    if (!ext) throw new UserError('Evidence must be an image (PNG, JPG, WEBP or GIF).', 'BAD_PROOF');
+    if (!data || !data.length) throw new UserError('The image is empty.', 'BAD_PROOF');
+    if (!looksLikeImage(data)) throw new UserError('The file does not appear to be a valid image.', 'BAD_PROOF');
+    if (data.length > MAX_PROOF_BYTES) throw new UserError('The image exceeds 8 MB.', 'BAD_PROOF');
     const name = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
     await fs.promises.writeFile(path.join(this.proofsDir, name), data);
     return `proof:${name}`;
@@ -312,20 +323,23 @@ class VerificationService {
 
   async _downloadImage(url) {
     const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
-    if (!res.ok || !res.body) throw new UserError('No pude descargar la imagen, inténtalo de nuevo.', 'PROOF_DOWNLOAD');
+    if (!res.ok || !res.body) {
+      await res.body?.cancel().catch(() => {});
+      throw new UserError('Could not download the image. Try again.', 'PROOF_DOWNLOAD');
+    }
     const reader = res.body.getReader();
     const chunks = [];
     let total = 0;
-    for (;;) {
+    try { for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
       total += value.byteLength;
       if (total > MAX_PROOF_BYTES) {
         await reader.cancel().catch(() => {});
-        throw new UserError('La imagen supera 8 MB.', 'BAD_PROOF');
+        throw new UserError('The image exceeds 8 MB.', 'BAD_PROOF');
       }
       chunks.push(Buffer.from(value));
-    }
+    } } finally { reader.releaseLock(); }
     return Buffer.concat(chunks);
   }
 
@@ -333,24 +347,33 @@ class VerificationService {
    * Guarda una captura como prueba de like/repost.
    * @param {{task, user, action, attachment:{url?:string, buffer?:Buffer, contentType:string, size?:number}}} p
    */
-  async submitProof({ task: taskRef, user, action, attachment }) {
+  async submitProof(input) {
+    const result = await this.lock.run(`${input.task.id}:${input.user.id}`, () => this._submitProof(input));
+    if (result.busy) throw new UserError('Your participation is already being checked. Please wait a few seconds.', 'BUSY');
+    return result.value;
+  }
+
+  async _submitProof({ task: taskRef, user, action, attachment }) {
     const task = this._fresh(taskRef);
-    if (!['like', 'repost'].includes(action)) throw new UserError('Las capturas sólo sirven para like o repost. Los comentarios se verifican con su enlace.', 'BAD_ACTION');
-    if (!task.actions.includes(action)) throw new UserError(`La tarea #${task.id} no pide ${ACTION_INFO[action].label.toLowerCase()}.`, 'BAD_ACTION');
+    if (!['like', 'repost'].includes(action)) throw new UserError('Screenshots are only accepted for likes or reposts. Replies and quotes use their post link.', 'BAD_ACTION');
+    if (!task.actions.includes(action)) throw new UserError(`Task #${task.id} does not require a ${ACTION_INFO[action].label.toLowerCase()}.`, 'BAD_ACTION');
     const settings = this.store.getSettings(task.guildId);
     const { member } = this._checkAccess(task, user, settings);
-    if (attachment.size && attachment.size > MAX_PROOF_BYTES) throw new UserError('La imagen supera 8 MB.', 'BAD_PROOF');
+    if (attachment.size && attachment.size > MAX_PROOF_BYTES) throw new UserError('The image exceeds 8 MB.', 'BAD_PROOF');
     if (!PROOF_TYPES[String(attachment.contentType || '').split(';')[0].trim().toLowerCase()]) {
-      throw new UserError('La prueba debe ser una imagen (PNG, JPG, WEBP o GIF).', 'BAD_PROOF');
+      throw new UserError('Evidence must be an image (PNG, JPG, WEBP or GIF).', 'BAD_PROOF');
     }
     const prev = this.store.userSubmissions(task.id, user.id).find((s) => s.action === action);
-    if (prev?.status === 'verified') throw new UserError('Esa acción ya está verificada. ¡No necesitas captura!', 'ALREADY');
+    if (prev?.status === 'verified') throw new UserError('That action is already verified. No screenshot is needed.', 'ALREADY');
 
     const buffer = attachment.buffer || (await this._downloadImage(attachment.url));
+    this._checkAccess(this._fresh(task), user, settings);
     const evidence = await this._storeProof({ buffer, contentType: attachment.contentType });
 
     const auto = member.trust >= settings.verification.autoApproveTrust;
-    const { sub, sync } = this.store.db.transaction(() => {
+    let savedResult;
+    try { savedResult = this.store.db.transaction(() => {
+      this._checkAccess(this._fresh(task), user, settings);
       const saved = this.store.upsertSubmission({
         taskId: task.id,
         guildId: task.guildId,
@@ -364,15 +387,19 @@ class VerificationService {
       });
       if (auto) this.store.adjustTrust(task.guildId, user.id, (t) => applyTrust(t, 'screenshot_approved'));
       return { sub: saved, sync: this.tasks.syncUserTask(task, user.id) };
-    });
+    }); } catch (err) {
+      await fs.promises.unlink(this.proofPath(evidence)).catch(() => {});
+      throw err;
+    }
+    const { sub, sync } = savedResult;
     this.tasks.markDirty(task.id);
     this.bus?.change(task.guildId, 'submission', { taskId: task.id, userId: user.id });
     const name = user.displayName || user.username;
-    this.tasks.audit(task.guildId, 'proof', { id: user.id, name }, `${name} subió una captura (${ACTION_INFO[action].label}) en #${task.id}${auto ? ' — aprobada automáticamente' : ''}`, {
+    this.tasks.audit(task.guildId, 'proof', { id: user.id, name }, `${name} uploaded a screenshot (${ACTION_INFO[action].label}) on #${task.id}${auto ? ' — automatically approved' : ''}`, {
       taskId: task.id,
       userId: user.id,
     });
-    if (sync.completedNow) this.tasks.audit(task.guildId, 'complete', { id: user.id, name }, `${name} completó la tarea #${task.id}`, { taskId: task.id, userId: user.id });
+    if (sync.completedNow) this.tasks.audit(task.guildId, 'complete', { id: user.id, name }, `${name} completed task #${task.id}`, { taskId: task.id, userId: user.id });
     if (!auto) this.publishReview(task, sub, user, attachment.url).catch((err) => this.log?.warn(`Aviso de revisión falló: ${err.message}`));
     return { submission: sub, autoApproved: auto, progress: sync.progress };
   }
@@ -380,11 +407,21 @@ class VerificationService {
   proofPath(evidence) {
     if (!evidence || !String(evidence).startsWith('proof:')) return null;
     const name = String(evidence).slice(6);
-    if (!/^[\w.-]+$/.test(name)) return null;
+    if (!/^[\w][\w.-]*$/.test(name) || name.includes('..') || !this.proofsDir) return null;
     return path.join(this.proofsDir, name);
   }
 
-  async publishReview(task, sub, user, imageUrl = null) {
+  publishReview(task, sub, user, imageUrl = null) {
+    const job = this._publishReview(task, sub, user, imageUrl).finally(() => this.background.delete(job));
+    this.background.add(job);
+    return job;
+  }
+
+  idle() {
+    return Promise.allSettled([...this.background]);
+  }
+
+  async _publishReview(task, sub, user, imageUrl = null) {
     const link = this.store.getLink(sub.userId);
     const posted = await this.tasks.publisher.reviewRequest(task, sub, { ...user, xHandle: link?.handle || null }, imageUrl);
     if (posted?.messageId) {
@@ -395,16 +432,16 @@ class VerificationService {
   // ─── Revisión manual ───────────────────────────────────────────
   review(guildId, submissionId, { approve, reviewer, reason = null }) {
     const sub = this.store.getSubmission(Number(submissionId));
-    if (!sub || sub.guildId !== guildId) throw new UserError('No existe ese envío.', 'NOT_FOUND');
+    if (!sub || sub.guildId !== guildId) throw new UserError('That submission does not exist.', 'NOT_FOUND');
     const task = this.store.getTask(sub.taskId);
-    if (!task) throw new UserError('La tarea ya no existe.', 'NOT_FOUND');
-    if (approve && sub.status === 'verified') throw new UserError('Ya estaba aprobado.', 'ALREADY');
-    if (!approve && sub.status === 'rejected') throw new UserError('Ya estaba rechazado.', 'ALREADY');
+    if (!task) throw new UserError('The task no longer exists.', 'NOT_FOUND');
+    if (approve && sub.status === 'verified') throw new UserError('Already approved.', 'ALREADY');
+    if (!approve && sub.status === 'rejected') throw new UserError('Already rejected.', 'ALREADY');
 
     const result = this.store.db.transaction(() => {
       const updated = this.store.setSubmissionStatus(sub.id, {
         status: approve ? 'verified' : 'rejected',
-        reason: approve ? null : reason || 'Rechazado por el staff',
+        reason: approve ? null : reason || 'Rejected by staff',
         reviewerId: reviewer?.id || 'panel',
       });
       this.store.adjustTrust(guildId, sub.userId, (t) =>
@@ -420,13 +457,13 @@ class VerificationService {
       guildId,
       'review',
       reviewer,
-      `${approve ? 'Aprobado' : 'Rechazado'}: ${ACTION_INFO[sub.action].label} de <@${sub.userId}> en #${task.id}${!approve && reason ? ` — ${reason}` : ''}`,
+      `${approve ? 'Approved' : 'Rejected'}: ${ACTION_INFO[sub.action].label} by <@${sub.userId}> on #${task.id}${!approve && reason ? ` — ${reason}` : ''}`,
       { taskId: task.id, userId: sub.userId, submissionId: sub.id },
     );
     if (result.sync.completedNow) {
-      this.tasks.audit(guildId, 'complete', null, `<@${sub.userId}> completó la tarea #${task.id} (tras revisión)`, { taskId: task.id, userId: sub.userId });
+      this.tasks.audit(guildId, 'complete', null, `<@${sub.userId}> completed task #${task.id} (after review)`, { taskId: task.id, userId: sub.userId });
     }
-    const decided = { approve, by: reviewer?.name || 'Staff', reason: approve ? null : reason || 'Rechazado por el staff' };
+    const decided = { approve, by: reviewer?.name || 'Staff', reason: approve ? null : reason || 'Rejected by staff' };
     this.tasks.publisher
       .reviewDecided(task, result.updated, decided)
       .catch((err) => this.log?.debug(`No se pudo notificar la revisión: ${err.message}`));
@@ -436,8 +473,8 @@ class VerificationService {
   /** Marca manualmente una acción como hecha o no hecha (desde el panel). */
   setManual(guildId, taskId, userId, action, { done, reviewer }) {
     const task = this.store.getGuildTask(guildId, Number(taskId));
-    if (!task) throw new UserError('No existe la tarea.', 'NOT_FOUND');
-    if (!task.actions.includes(action)) throw new UserError('La tarea no incluye esa acción.', 'BAD_ACTION');
+    if (!task) throw new UserError('That task does not exist.', 'NOT_FOUND');
+    if (!task.actions.includes(action)) throw new UserError('This task does not include that action.', 'BAD_ACTION');
     const res = this.store.db.transaction(() => {
       this.store.ensureMember(guildId, userId);
       this.store.upsertSubmission({
@@ -447,7 +484,7 @@ class VerificationService {
         action,
         status: done ? 'verified' : 'rejected',
         method: 'manual',
-        reason: done ? null : 'Marcado como no hecho por el staff',
+        reason: done ? null : 'Marked incomplete by staff',
         reviewerId: reviewer?.id || 'panel',
         countAttempt: false,
       });
@@ -455,7 +492,7 @@ class VerificationService {
     });
     this.tasks.markDirty(task.id);
     this.bus?.change(guildId, 'submission', { taskId: task.id, userId });
-    this.tasks.audit(guildId, 'review', reviewer, `${ACTION_INFO[action].label} de <@${userId}> marcado como ${done ? 'hecho' : 'no hecho'} en #${task.id}`, {
+    this.tasks.audit(guildId, 'review', reviewer, `${ACTION_INFO[action].label} by <@${userId}> marked as ${done ? 'done' : 'incomplete'} on #${task.id}`, {
       taskId: task.id,
       userId,
     });

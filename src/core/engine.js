@@ -49,21 +49,23 @@ class Engine {
   updateSettings(guildId, patch, actor = null) {
     const current = this.store.getSettings(guildId);
     const { settings, errors } = applySettingsPatch(current, patch);
-    if (errors.length) throw new UserError(`Ajustes no válidos: ${errors.join('; ')}`, 'BAD_SETTINGS', { errors });
+    if (errors.length) throw new UserError(`Invalid settings: ${errors.join('; ')}`, 'BAD_SETTINGS', { errors });
     this.store.saveSettings(guildId, settings);
-    const entry = this.store.addAudit({ guildId, type: 'settings', actorId: actor?.id || null, actorName: actor?.name || null, message: 'Configuración actualizada', data: patch });
+    const entry = this.store.addAudit({ guildId, type: 'settings', actorId: actor?.id || null, actorName: actor?.name || null, message: 'Settings updated', data: patch });
     this.bus.emit('audit', entry);
     this.bus.change(guildId, 'settings', {});
     return settings;
   }
 
   start() {
+    for (const task of this.store.activeTasks()) this.tasks.markDirty(task.id);
     this.scheduler.start();
   }
 
   stop() {
-    this.scheduler.stop();
+    const pending = this.scheduler.stop();
     this.bus.removeAllListeners();
+    return pending;
   }
 }
 

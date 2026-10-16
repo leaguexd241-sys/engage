@@ -14,7 +14,10 @@ const { parseDuration, clampDuration } = require('../util/time');
 const { inviteUrl } = require('../discord/client');
 
 /** Envuelve un manejador async: errores de usuario → 400, el resto → 500 registrado. */
-const ah = (log) => (fn) => async (req, res, next) => {
+const ah = (log, active) => (fn) => async (req, res, next) => {
+  let finish;
+  const operation = new Promise((resolve) => { finish = resolve; });
+  active?.add(operation);
   try {
     await fn(req, res, next);
   } catch (err) {
@@ -22,6 +25,9 @@ const ah = (log) => (fn) => async (req, res, next) => {
     if (err?.code === 'BUSY') return res.status(503).json({ error: err.message });
     log.error(`Error en ${req.method} ${req.originalUrl}:`, err);
     return res.status(500).json({ error: 'Error interno del servidor. Revisa el registro del bot.' });
+  } finally {
+    active?.delete(operation);
+    finish();
   }
   return undefined;
 };
@@ -37,7 +43,9 @@ const STATUS_LABEL = { verified: 'Hecho', pending: 'En revisión', awaiting: 'Fa
 
 function createApi({ engine, auth, config, log, live, getBotInfo }) {
   const r = express.Router();
-  const wrap = ah(log);
+  const active = new Set();
+  const wrap = ah(log, active);
+  r.idle = () => Promise.allSettled([...active]);
   const { store, tasks, verification, links } = engine;
 
   const actor = (req) => ({ id: req.session.uid === 'owner' ? null : req.session.uid, name: req.session.name || 'Panel' });
@@ -69,6 +77,7 @@ function createApi({ engine, auth, config, log, live, getBotInfo }) {
     wrap((req, res) => {
       if (!req.session.owner) throw new UserError('Sólo el propietario puede cerrar todas las sesiones.', 'FORBIDDEN');
       auth.revokeAll();
+      live.closeAll();
       auth.clearSession(res);
       res.json({ ok: true });
     }),
@@ -103,6 +112,14 @@ function createApi({ engine, auth, config, log, live, getBotInfo }) {
   );
 
   r.get('/events', live.handler());
+
+  r.post('/discord/intents/refresh', wrap(async (req, res) => {
+    if (!req.session.owner) throw new UserError('Sólo el propietario puede comprobar la conexión del bot.', 'FORBIDDEN');
+    const gateway = engine.gateway;
+    if (!gateway?.refreshMembersIntent) throw new UserError('El bot no está conectado a Discord.', 'OFFLINE');
+    await gateway.refreshMembersIntent();
+    res.json({ bot: getBotInfo() });
+  }));
 
   // ─── Servidores ────────────────────────────────────────────────
   const listAccessibleGuilds = (session) => {

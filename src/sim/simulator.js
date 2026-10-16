@@ -135,7 +135,7 @@ class Simulator {
       if (attachment) {
         const buffer = attachment.sample ? sampleProofPng() : Buffer.from(String(attachment.dataBase64 || ''), 'base64');
         const contentType = attachment.sample ? 'image/png' : attachment.contentType;
-        values[attachment.option || 'imagen'] = { url: null, contentType, size: buffer.length, name: attachment.name || 'captura.png', buffer };
+        values[attachment.option || 'image'] = { url: null, contentType, size: buffer.length, name: attachment.name || 'captura.png', buffer };
       }
       const i = new FakeInteraction(this, { kind: 'command', userId, channelId: channelId || this.ids.general, commandName: name, subcommand, values });
       return this._run(i);

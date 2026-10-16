@@ -32,6 +32,11 @@ class LiveEvents {
       const allowed = (gid) => (guildId ? gid === guildId : this.auth.canAccessGuild(req.session, gid));
       const send = (event, data) => {
         try {
+          if (res.destroyed || res.writableLength > 64 * 1024) {
+            cleanup();
+            res.destroy();
+            return;
+          }
           res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
         } catch {
           cleanup();
@@ -45,6 +50,16 @@ class LiveEvents {
       };
       const heartbeat = setInterval(() => {
         try {
+          if ((req.session.exp && req.session.exp <= Date.now()) || (req.session.v && req.session.v !== this.auth.version)) {
+            cleanup();
+            res.end();
+            return;
+          }
+          if (res.writableLength > 64 * 1024) {
+            cleanup();
+            res.destroy();
+            return;
+          }
           res.write(': ping\n\n');
         } catch {
           cleanup();
@@ -61,12 +76,16 @@ class LiveEvents {
         this.bus.off('change', onChange);
         this.bus.off('audit', onAudit);
         this.clients.delete(client);
+        req.off('close', cleanup);
+        res.off('close', cleanup);
+        res.off('error', cleanup);
       };
       client.cleanup = cleanup;
       this.clients.add(client);
       this.bus.on('change', onChange);
       this.bus.on('audit', onAudit);
       req.on('close', cleanup);
+      res.on('close', cleanup);
       res.on('error', cleanup);
       return undefined;
     };

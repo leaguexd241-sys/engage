@@ -1,4 +1,5 @@
 // Utilidades de interfaz: plantillas seguras, iconos, avisos, diálogos, formatos y gráficos.
+import { getLocale, getLanguage, t } from './i18n.js';
 
 // ─── Plantillas con escape automático (evita XSS) ────────────────
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -82,23 +83,26 @@ const P = {
 export const icon = (name, cls = '') => raw(`<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[name] || P.info}</svg>`);
 
 // ─── Formatos ─────────────────────────────────────────────────────
-const nf = new Intl.NumberFormat('es-ES');
-const nfc = new Intl.NumberFormat('es-ES', { notation: 'compact', maximumFractionDigits: 1 });
-export const num = (n) => (n === null || n === undefined || Number.isNaN(Number(n)) ? '—' : nf.format(Number(n)));
-export const compact = (n) => (n === null || n === undefined || Number.isNaN(Number(n)) ? '—' : nfc.format(Number(n)));
-const rtf = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
+const formats = Object.fromEntries(['es', 'en'].map((lang) => [lang, {
+  nf: new Intl.NumberFormat(lang),
+  nfc: new Intl.NumberFormat(lang, { notation: 'compact', maximumFractionDigits: 1 }),
+  rtf: new Intl.RelativeTimeFormat(lang, { numeric: 'auto' }),
+  dtf: new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }),
+}]));
+export const num = (n) => (n === null || n === undefined || Number.isNaN(Number(n)) ? '—' : formats[getLanguage()].nf.format(Number(n)));
+export const compact = (n) => (n === null || n === undefined || Number.isNaN(Number(n)) ? '—' : formats[getLanguage()].nfc.format(Number(n)));
 export function ago(ms) {
   if (!ms) return '—';
   const diff = (ms - Date.now()) / 1000;
   const abs = Math.abs(diff);
-  if (abs < 45) return diff < 0 ? 'hace un momento' : 'en unos segundos';
+  const { rtf } = formats[getLanguage()];
+  if (abs < 45) return getLanguage() === 'en' ? (diff < 0 ? 'just now' : 'in a few seconds') : (diff < 0 ? 'hace un momento' : 'en unos segundos');
   if (abs < 3600) return rtf.format(Math.round(diff / 60), 'minute');
   if (abs < 86400) return rtf.format(Math.round(diff / 3600), 'hour');
   if (abs < 86400 * 30) return rtf.format(Math.round(diff / 86400), 'day');
   return dateTime(ms);
 }
-const dtf = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
-export const dateTime = (ms) => (ms ? dtf.format(new Date(ms)) : '—');
+export const dateTime = (ms) => (ms ? formats[getLanguage()].dtf.format(new Date(ms)) : '—');
 export function duration(ms) {
   const m = Math.max(0, Math.round(ms / 60000));
   const d = Math.floor(m / 1440);

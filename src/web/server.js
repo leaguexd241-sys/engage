@@ -66,7 +66,8 @@ async function startWeb({ engine, config, log, sim = null, getBotInfo }) {
   if (sim) {
     app.use('/api/sim', auth.requireAuth(), createSimApi({ sim, log: log.child('sim') }));
   }
-  app.use('/api', createApi({ engine, auth, config, log: log.child('api'), live, getBotInfo }));
+  const api = createApi({ engine, auth, config, log: log.child('api'), live, getBotInfo });
+  app.use('/api', api);
   app.use('/api', (req, res) => res.status(404).json({ error: 'Ruta no encontrada.' }));
 
   app.use(
@@ -115,6 +116,7 @@ async function startWeb({ engine, config, log, sim = null, getBotInfo }) {
         server.close(() => resolve());
         server.closeAllConnections?.();
       });
+      await api.idle();
     },
   };
 }

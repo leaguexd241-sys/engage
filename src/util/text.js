@@ -75,8 +75,8 @@ function progressBar(ratio, width = 12) {
   return '▰'.repeat(filled) + '▱'.repeat(width - filled);
 }
 
-const nf = new Intl.NumberFormat('es-ES');
-const nfCompact = new Intl.NumberFormat('es-ES', { notation: 'compact', maximumFractionDigits: 1 });
+const nf = new Intl.NumberFormat('en-US');
+const nfCompact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 
 function fmtNum(n) {
   if (n === null || n === undefined || !Number.isFinite(Number(n))) return '—';

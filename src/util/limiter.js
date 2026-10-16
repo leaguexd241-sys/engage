@@ -1,7 +1,7 @@
 'use strict';
 
 class BusyError extends Error {
-  constructor(message = 'El sistema está ocupado, inténtalo de nuevo en unos segundos.') {
+  constructor(message = 'The system is busy. Try again shortly.') {
     super(message);
     this.name = 'BusyError';
     this.code = 'BUSY';

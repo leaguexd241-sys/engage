@@ -36,6 +36,8 @@ async function main({ demo = false, overrides = {}, handleSignals = true } = {})
   let discordError = null;
   let retryTimer = null;
   let stopping = false;
+  let stopPromise = null;
+  let removeSignalHandlers = () => {};
 
   const connectDiscord = async () => {
     const { startDiscord } = require('./discord/client');
@@ -79,6 +81,7 @@ async function main({ demo = false, overrides = {}, handleSignals = true } = {})
         user: discord.gateway.botUser(),
         guilds: discord.gateway.listGuilds().length,
         membersIntent: discord.membersIntent,
+        intentStatus: { ...discord.gateway.intentStatus },
         ping: discord.client.ws.ping,
       };
     }
@@ -108,22 +111,28 @@ async function main({ demo = false, overrides = {}, handleSignals = true } = {})
     }
   }
 
-  const stop = async () => {
-    if (stopping) return;
+  const stop = () => {
+    if (stopPromise) return stopPromise;
     stopping = true;
-    log.info('Apagando…');
-    clearTimeout(retryTimer);
-    engine.stop();
-    try {
-      await engine.tasks.flushDirty();
-    } catch {
-      /* ignorar */
-    }
-    if (web) await web.close().catch(() => {});
-    if (discord) await discord.stop().catch(() => {});
-    db.close();
-    log.info('Apagado completo.');
-    log.close();
+    removeSignalHandlers();
+    stopPromise = (async () => {
+      log.info('Apagando…');
+      clearTimeout(retryTimer);
+      const stoppingEngine = engine.stop();
+      await stoppingEngine;
+      try {
+        await engine.tasks.flushDirty();
+      } catch {
+        /* ignorar */
+      }
+      if (web) await web.close().catch(() => {});
+      if (discord) await discord.stop().catch(() => {});
+      await engine.verification.idle();
+      db.close();
+      log.info('Apagado completo.');
+      log.close();
+    })();
+    return stopPromise;
   };
 
   if (handleSignals) {
@@ -136,13 +145,23 @@ async function main({ demo = false, overrides = {}, handleSignals = true } = {})
       log.info(`Señal ${sig} recibida.`);
       stop().finally(() => exitSoon(0));
     };
-    process.once('SIGINT', onSignal);
-    process.once('SIGTERM', onSignal);
-    process.on('unhandledRejection', (reason) => log.error('Promesa rechazada sin controlar:', reason));
-    process.on('uncaughtException', (err) => {
+    const onSigint = () => onSignal('SIGINT');
+    const onSigterm = () => onSignal('SIGTERM');
+    const onUnhandled = (reason) => log.error('Promesa rechazada sin controlar:', reason);
+    const onUncaught = (err) => {
       log.error('Excepción no controlada (el bot se reiniciará si usas iniciar.bat o pm2):', err);
       stop().finally(() => exitSoon(1));
-    });
+    };
+    process.once('SIGINT', onSigint);
+    process.once('SIGTERM', onSigterm);
+    process.on('unhandledRejection', onUnhandled);
+    process.on('uncaughtException', onUncaught);
+    removeSignalHandlers = () => {
+      process.off('SIGINT', onSigint);
+      process.off('SIGTERM', onSigterm);
+      process.off('unhandledRejection', onUnhandled);
+      process.off('uncaughtException', onUncaught);
+    };
   }
 
   return { config, log, engine, db, x, sim, web, get discord() { return discord; }, getBotInfo, stop };

@@ -16,10 +16,10 @@ function card(s) {
       </div>
       <dl class="dl mt">
         <dt>Tarea</dt><dd><a href="#/g/${state.guildId}/tareas/${s.taskId}">#${s.taskId}</a> · <a href="${s.tweetUrl}" target="_blank" rel="noopener">ver post ${icon('external')}</a>${s.taskStatus !== 'active' ? html` <span class="badge">finalizada</span>` : ''}</dd>
-        <dt>Prueba</dt><dd>${s.method === 'screenshot' ? 'Captura de pantalla' : 'Declaración sin captura'}</dd>
+        <dt>Prueba</dt><dd>${s.method === 'auto' ? 'Post comprobado en X' : s.method === 'screenshot' ? 'Captura de pantalla' : 'Declaración sin captura'}</dd>
         <dt>Enviado</dt><dd>${ago(s.updatedAt)}</dd>
       </dl>
-      ${s.proofUrl ? html`<a href="${s.proofUrl}" target="_blank" rel="noopener"><img class="proof-img mt" src="${s.proofUrl}" alt="Captura enviada por el miembro" loading="lazy" /></a>` : html`<div class="alert warning small mt">${icon('info')}<span>Sin captura: el miembro declaró haberlo hecho. Compara con el contador de ${a.label.toLowerCase()}s del post.</span></div>`}
+      ${s.method === 'auto' ? html`<div class="alert info small mt">${icon('info')}<span>Calidad orientativa: ${s.quality}/100. El staff decide si el comentario es válido.</span></div><blockquote data-i18n-ignore>${s.evidenceText || ''}</blockquote><a href="${s.evidenceUrl}" target="_blank" rel="noopener">Ver comentario en X ${icon('external')}</a>` : s.proofUrl ? html`<a href="${s.proofUrl}" target="_blank" rel="noopener"><img class="proof-img mt" src="${s.proofUrl}" alt="Captura enviada por el miembro" loading="lazy" /></a>` : html`<div class="alert warning small mt">${icon('info')}<span>Sin captura: el miembro declaró haberlo hecho. Compara con el contador de ${a.label.toLowerCase()}s del post.</span></div>`}
       <div class="row mt">
         <button class="btn success sm" data-act="approve" data-sid="${s.id}">${icon('check')} Aprobar</button>
         <button class="btn danger sm" data-act="reject" data-sid="${s.id}">${icon('x')} Rechazar</button>

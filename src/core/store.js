@@ -560,7 +560,7 @@ class Store {
     this.db.run(
       `INSERT INTO submissions (task_id, guild_id, user_id, action, status, method, evidence_url, evidence_id, evidence_text,
          quality, details, reason, attempts, reviewer_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(task_id, user_id, action) DO UPDATE SET
          status = excluded.status, method = excluded.method, evidence_url = excluded.evidence_url,
          evidence_id = excluded.evidence_id, evidence_text = excluded.evidence_text, quality = excluded.quality,
@@ -578,6 +578,7 @@ class Store {
       s.quality ?? null,
       JSON.stringify(s.details || {}),
       s.reason || null,
+      s.countAttempt === false ? 0 : 1,
       s.reviewerId || null,
       now,
       now,

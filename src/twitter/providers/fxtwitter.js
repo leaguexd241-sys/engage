@@ -1,7 +1,7 @@
 'use strict';
 
 const { XError } = require('../errors');
-const { httpGet, parseJson } = require('../http');
+const { httpGet, parseJson, retryAfterMs } = require('../http');
 const { stripLeadingMentions } = require('../../util/text');
 const { tweetUrl } = require('../urls');
 
@@ -59,7 +59,7 @@ function classify(res, j, what) {
   const code = j?.code ?? res.status;
   if (code === 404) throw new XError('NOT_FOUND', `${what} no existe o fue eliminado`);
   if (code === 401 || code === 403) throw new XError('PROTECTED', 'La cuenta es privada');
-  if (code === 429) throw new XError('RATE_LIMITED', 'Límite de peticiones');
+  if (code === 429 || res.status === 429) throw new XError('RATE_LIMITED', 'Límite de peticiones', { retryAfterMs: retryAfterMs(res.headers) });
   if (code === 400) throw new XError('NOT_FOUND', `${what} no válido`);
   if (code >= 400 || res.status >= 400) throw new XError('UNAVAILABLE', `HTTP ${code}`);
 }
@@ -70,6 +70,7 @@ function createFxTwitterProvider({ timeoutMs, userAgent, fetchImpl } = {}) {
   async function getTweet(id) {
     const res = await httpGet(`${BASE}/2/status/${id}`, opts);
     const j = parseJson(res.text);
+    if (res.status === 429) classify(res, null, 'El post');
     if (!j) {
       if (res.status === 404) throw new XError('NOT_FOUND', 'El post no existe o fue eliminado');
       throw new XError('UNAVAILABLE', `Respuesta no válida (HTTP ${res.status})`);
@@ -82,6 +83,7 @@ function createFxTwitterProvider({ timeoutMs, userAgent, fetchImpl } = {}) {
   async function getProfile(handle) {
     const res = await httpGet(`${BASE}/2/profile/${encodeURIComponent(handle)}`, opts);
     const j = parseJson(res.text);
+    if (res.status === 429) classify(res, null, 'El usuario');
     if (!j) {
       if (res.status === 404 || res.status === 302) throw new XError('NOT_FOUND', 'Usuario no encontrado');
       throw new XError('UNAVAILABLE', `Respuesta no válida (HTTP ${res.status})`);
