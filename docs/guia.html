@@ -74,7 +74,7 @@
           <h2><span class="num">2.</span>Cómo funciona sin la API de X</h2>
           <p class="lead">La API oficial de X es de pago y muy limitada. Este bot no la necesita: las acciones las hace cada miembro con su cuenta y el bot las comprueba leyendo datos públicos.</p>
           <div class="flow">
-            <div class="box"><b>1 · El staff crea la tarea</b>Pega el enlace del post (comando <code>/tarea crear</code> o el panel).</div>
+            <div class="box"><b>1 · El staff crea la tarea</b>Pega el enlace del post (comando <code>/task create</code> o el panel).</div>
             <div class="arrow">→</div>
             <div class="box"><b>2 · El miembro actúa en X</b>Los botones abren el like/repost/comentario oficiales de X en su cuenta.</div>
             <div class="arrow">→</div>
@@ -88,7 +88,7 @@
             <table>
               <thead><tr><th>Acción</th><th>Cómo se comprueba</th><th>Fiabilidad</th></tr></thead>
               <tbody>
-                <tr><td>💬 Comentario</td><td>Se lee el comentario en X: debe ser de la cuenta vinculada del miembro, responder al post de la tarea, superar la calidad mínima y no ser una copia. Al cerrar la tarea se vuelve a comprobar que no se borró.</td><td><span class="badge ok">Comprobado</span></td></tr>
+                <tr><td>💬 Comentario</td><td>Se lee el comentario en X: debe ser de la cuenta vinculada del miembro, responder al post de la tarea, no ser una copia; si la valoración de calidad es baja, el staff decide su validez. Al cerrar la tarea se vuelve a comprobar que no se borró.</td><td><span class="badge ok">Comprobado</span></td></tr>
                 <tr><td>🗨️ Cita</td><td>Igual que el comentario, pero el post debe citar al de la tarea.</td><td><span class="badge ok">Comprobado</span></td></tr>
                 <tr><td>🔁 Repost</td><td>Se busca en el perfil público del miembro. Si aparece, queda comprobado; si X no lo muestra (a veces lo oculta o limita), se aplica el modo de prueba del servidor.</td><td><span class="badge ok">Comprobado</span> / <span class="badge warn">según modo</span></td></tr>
                 <tr><td>❤️ Like</td><td>Desde junio de 2024 X hizo los likes <strong>privados</strong>: nadie (salvo el autor) puede ver quién dio like, con o sin API. Por eso se usa el modo del servidor: <em>declaración</em>, <em>captura</em> o <em>revisión del staff</em>, más una auditoría automática que compara los likes declarados con el contador público del post.</td><td><span class="badge warn">Según modo + auditoría</span></td></tr>
@@ -180,13 +180,13 @@ npm start                 # arranca el bot y el panel</code></pre>
         <section id="primeros-pasos">
           <h2><span class="num">7.</span>Primeros pasos en tu servidor</h2>
           <ol class="steps">
-            <li><strong>Canal de tareas</strong><code>/config canal canal:#tareas</code> — donde se publicarán las tareas.</li>
-            <li><strong>Rol de participantes</strong><code>/config rol-participantes rol:@Raiders</code> — quién <em>debe</em> hacer las tareas. Con esto el bot sabe exactamente quién falta.</li>
-            <li><strong>Canal del staff</strong><code>/config logs canal:#staff-logs</code> — privado para moderadores: aquí llegan las capturas a revisar con botones de Aprobar/Rechazar.</li>
-            <li><strong>Modo de verificación de likes/reposts</strong><code>/config verificacion modo:…</code> — <em>Declaración</em> (rápido), <em>Captura obligatoria</em> o <em>Revisión manual</em>. Se explica en la sección 12.</li>
-            <li><strong>Publica tu primera tarea</strong><code>/tarea crear enlace:https://x.com/…/status/…</code> o desde el panel con vista previa.</li>
+            <li><strong>Canal de tareas</strong><code>/config channel channel:#tasks</code> — donde se publicarán las tareas.</li>
+            <li><strong>Rol de participantes</strong><code>/config participant-role role:@Raiders</code> — quién <em>debe</em> hacer las tareas. Con esto el bot sabe exactamente quién falta.</li>
+            <li><strong>Canal del staff</strong><code>/config logs channel:#staff-logs</code> — privado para moderadores: aquí llegan las capturas a revisar con botones de Aprobar/Rechazar.</li>
+            <li><strong>Modo de verificación de likes/reposts</strong><code>/config verification mode:…</code> — <em>Declaración</em> (rápido), <em>Captura obligatoria</em> o <em>Revisión manual</em>. Se explica en la sección 12.</li>
+            <li><strong>Publica tu primera tarea</strong><code>/task create url:https://x.com/…/status/…</code> o desde el panel con vista previa.</li>
           </ol>
-          <div class="note info"><span>💡</span><p>Pide a tus miembros que usen <code>/vincular usuario:@sucuenta</code> una vez. Sin cuenta vinculada no se puede comprobar que el comentario es suyo.</p></div>
+          <div class="note info"><span>💡</span><p>Pide a tus miembros que usen <code>/link user:@sucuenta</code> una vez. Sin cuenta vinculada no se puede comprobar que el comentario es suyo.</p></div>
         </section>
 
         <!-- 8 -->
@@ -213,21 +213,21 @@ npm start                 # arranca el bot y el panel</code></pre>
             <figure class="msg"><img src="img/27-tarea-completada.png" alt="Tarea completada" loading="lazy" /><figcaption>Resultado: cada acción con cómo se comprobó y los puntos ganados.</figcaption></figure>
           </div>
           <p>Si algo no es válido, el bot explica por qué y ofrece <strong>Reintentar</strong>. Por ejemplo, un comentario vacío de contenido:</p>
-          <figure class="msg"><img src="img/29-comentario-rechazado.png" alt="Comentario rechazado por baja calidad" loading="lazy" /><figcaption>“top 🔥🔥🔥” se rechaza: calidad 0/100. Like y repost sí cuentan.</figcaption></figure>
+          <figure class="msg"><img src="img/29-comentario-rechazado.png" alt="Comentario enviado a revisión por calidad" loading="lazy" /><figcaption>“top 🔥🔥🔥” pasa a revisión del staff sin descontar confianza ni intentos. Like y repost sí cuentan.</figcaption></figure>
           <h3>4 · Ver quién falta, su progreso y su perfil</h3>
           <div class="shots">
             <figure class="msg"><img src="img/28-quien-falta.png" alt="Quién hizo la tarea y quién no" loading="lazy" /><figcaption>Botón <strong>👥 Quién falta</strong>: quién completó y quién no.</figcaption></figure>
-            <figure class="msg"><img src="img/35-perfil.png" alt="Perfil del miembro" loading="lazy" /><figcaption><code>/perfil</code>: puntos, puesto, confianza y racha.</figcaption></figure>
+            <figure class="msg"><img src="img/35-perfil.png" alt="Perfil del miembro" loading="lazy" /><figcaption><code>/profile</code>: puntos, puesto, confianza y racha.</figcaption></figure>
           </div>
           <h3>5 · Si el servidor pide captura</h3>
-          <p>En modo <em>Captura obligatoria</em>, tras pulsar “Ya lo hice” el bot pide una captura del like/repost: <code>/prueba tarea:12 accion:like imagen:(adjuntar)</code>. Si el miembro tiene confianza alta, se aprueba sola; si no, la revisa el staff y el miembro recibe el resultado por mensaje directo.</p>
+          <p>En modo <em>Captura obligatoria</em>, tras pulsar “Ya lo hice” el bot pide una captura del like/repost: <code>/proof task:12 action:like image:(adjuntar)</code>. Si el miembro tiene confianza alta, se aprueba sola; si no, la revisa el staff y el miembro recibe el resultado por mensaje directo.</p>
         </section>
 
         <!-- 9 -->
         <section id="staff">
           <h2><span class="num">9.</span>Guía para el staff</h2>
           <h3>Crear tareas</h3>
-          <p>Con <code>/tarea crear enlace:… [like] [repost] [comentario] [cita] [duracion] [multiplicador] [canal] [participantes] [mencionar] [nota]</code> o desde el panel (<em>Nueva tarea</em>), que muestra el post y una vista previa exacta del mensaje de Discord antes de publicarlo.</p>
+          <p>Con <code>/task create url:… [like] [repost] [reply] [quote] [duration] [multiplier] [channel] [participants] [mention] [note]</code> o desde el panel (<em>Nueva tarea</em>), que muestra el post y una vista previa exacta del mensaje de Discord antes de publicarlo.</p>
           <figure><img src="img/14-nueva-tarea.png" alt="Crear una tarea desde el panel con vista previa" loading="lazy" /><figcaption>Nueva tarea en el panel: post cargado de X, acciones, duración, canal, rol, puntos y vista previa en vivo.</figcaption></figure>
           <h3>Revisar capturas y declaraciones</h3>
           <p>Llegan al canal de registro con botones <strong>Aprobar</strong> / <strong>Rechazar</strong> (el rechazo pide un motivo, que el miembro recibe por MD), y también a la página <em>Revisión</em> del panel.</p>
@@ -237,13 +237,13 @@ npm start                 # arranca el bot y el panel</code></pre>
           </div>
           <h3>Durante y al final de la tarea</h3>
           <ul>
-            <li><strong>Recordatorio automático</strong> antes del final (15 min por defecto) a quien falta: en el canal, por MD o ambos. También manual con <code>/tarea recordar</code>.</li>
+            <li><strong>Recordatorio automático</strong> antes del final (15 min por defecto) a quien falta: en el canal, por MD o ambos. También manual con <code>/task remind</code>.</li>
             <li><strong>Cierre automático</strong> al terminar el tiempo: recomprueba los comentarios (anula los borrados), revisa los contadores públicos, actualiza rachas y publica el informe.</li>
-            <li><code>/tarea extender</code>, <code>/tarea cerrar</code> (cierra ya con informe) y <code>/tarea cancelar</code> (sin informe).</li>
+            <li><code>/task extend</code>, <code>/task close</code> (cierra ya con informe) y <code>/task cancel</code> (sin informe).</li>
           </ul>
           <figure class="msg"><img src="img/33-informe-final.png" alt="Informe final de la tarea" loading="lazy" /><figcaption>Informe final: participación, acciones verificadas, calidad media y la lista de quién completó, quién la dejó a medias y quién no participó.</figcaption></figure>
           <h3>Gestionar miembros</h3>
-          <p><code>/miembro puntos</code> (sumar o restar con motivo), <code>/miembro bloquear</code> / <code>desbloquear</code> (no puede participar ni cuenta como “falta”), <code>/miembro vincular</code> (vinculación manual verificada por el staff) y <code>/miembro desvincular</code>.</p>
+          <p><code>/member points</code> (sumar o restar con motivo), <code>/member block</code> / <code>desbloquear</code> (no puede participar ni cuenta como “falta”), <code>/member link</code> (vinculación manual verificada por el staff) y <code>/member unlink</code>.</p>
         </section>
 
         <!-- 10 -->
@@ -280,64 +280,63 @@ npm start                 # arranca el bot y el panel</code></pre>
           <div class="tablewrap"><table>
             <thead><tr><th>Comando</th><th>Qué hace</th></tr></thead>
             <tbody>
-              <tr><td><code>/vincular usuario:@tuusuario</code></td><td>Vincula y verifica tu cuenta de X (con el código en la biografía o en un post).</td></tr>
-              <tr><td><code>/desvincular</code></td><td>Quita tu cuenta de X.</td></tr>
-              <tr><td><code>/tareas</code></td><td>Tareas activas; marca con ✅ las que ya completaste.</td></tr>
-              <tr><td><code>/verificar [tarea] [comentario] [cita]</code></td><td>Igual que el botón ✅. Si sólo tienes una tarea pendiente no hace falta indicarla; puedes pasar el enlace del comentario directamente.</td></tr>
-              <tr><td><code>/prueba tarea accion imagen</code></td><td>Sube una captura como prueba de like o repost.</td></tr>
-              <tr><td><code>/perfil [miembro]</code></td><td>Puntos, puesto, confianza, racha, completadas y rechazos.</td></tr>
-              <tr><td><code>/ranking [periodo]</code></td><td>Top 10 de siempre, 30 días o 7 días.</td></tr>
-              <tr><td><code>/ayuda</code></td><td>Cómo funciona y lista de comandos.</td></tr>
+              <tr><td><code>/link user:@tuusuario</code></td><td>Vincula y verifica tu cuenta de X (con el código en la biografía o en un post).</td></tr>
+              <tr><td><code>/unlink</code></td><td>Quita tu cuenta de X.</td></tr>
+              <tr><td><code>/tasks</code></td><td>Tareas activas; marca con ✅ las que ya completaste.</td></tr>
+              <tr><td><code>/verify [task] [reply] [quote]</code></td><td>Igual que el botón ✅. Si sólo tienes una tarea pendiente no hace falta indicarla; puedes pasar el enlace del comentario directamente.</td></tr>
+              <tr><td><code>/proof task action image</code></td><td>Sube una captura como prueba de like o repost.</td></tr>
+              <tr><td><code>/profile [member]</code></td><td>Puntos, puesto, confianza, racha, completadas y rechazos.</td></tr>
+              <tr><td><code>/ranking [period]</code></td><td>Top 10 de siempre, 30 días o 7 días.</td></tr>
+              <tr><td><code>/help</code></td><td>Cómo funciona y lista de comandos.</td></tr>
             </tbody>
           </table></div>
           <h3>🛡️ Staff (permiso “Gestionar servidor” o rol de staff)</h3>
           <div class="tablewrap"><table>
             <thead><tr><th>Comando</th><th>Qué hace</th></tr></thead>
             <tbody>
-              <tr><td><code>/tarea crear enlace [like] [repost] [comentario] [cita] [duracion] [multiplicador] [canal] [participantes] [mencionar] [nota]</code></td><td>Publica una tarea. Si no marcas acciones, usa las de por defecto. Duración: <code>30m</code>, <code>2h</code>, <code>1d</code>, <code>1h30m</code>…</td></tr>
-              <tr><td><code>/tarea estado tarea</code></td><td>Quién hizo y quién no.</td></tr>
-              <tr><td><code>/tarea recordar tarea</code></td><td>Menciona a quien falta (máximo uno cada 5 min).</td></tr>
-              <tr><td><code>/tarea extender tarea tiempo</code></td><td>Amplía el tiempo.</td></tr>
-              <tr><td><code>/tarea cerrar tarea</code></td><td>Cierra ya y publica el informe final.</td></tr>
-              <tr><td><code>/tarea cancelar tarea</code></td><td>Detiene la tarea sin informe (los puntos ganados se mantienen).</td></tr>
-              <tr><td><code>/miembro puntos usuario cantidad [motivo]</code></td><td>Suma o resta puntos.</td></tr>
-              <tr><td><code>/miembro bloquear|desbloquear usuario</code></td><td>Impide o permite participar.</td></tr>
-              <tr><td><code>/miembro vincular usuario cuenta</code> · <code>/miembro desvincular usuario</code></td><td>Vinculación manual de la cuenta de X.</td></tr>
-              <tr><td><code>/panel</code></td><td>Enlace al panel web.</td></tr>
-            </tbody>
+              <tr><td><code>/task create url [like] [repost] [reply] [quote] [duration] [multiplier] [channel] [participants] [mention] [note]</code></td><td>Publica una tarea. Si no marcas acciones, usa las de por defecto. Duración: <code>30m</code>, <code>2h</code>, <code>1d</code>, <code>1h30m</code>…</td></tr>
+              <tr><td><code>/task status task</code></td><td>Quién hizo y quién no.</td></tr>
+              <tr><td><code>/task remind task</code></td><td>Menciona a quien falta (máximo uno cada 5 min).</td></tr>
+              <tr><td><code>/task extend task time</code></td><td>Amplía el tiempo.</td></tr>
+              <tr><td><code>/task close task</code></td><td>Cierra ya y publica el informe final.</td></tr>
+              <tr><td><code>/task cancel task</code></td><td>Detiene la tarea sin informe (los puntos ganados se mantienen).</td></tr>
+              <tr><td><code>/member points user amount [reason]</code></td><td>Suma o resta puntos.</td></tr>
+              <tr><td><code>/member block|unblock user</code></td><td>Impide o permite participar.</td></tr>
+              <tr><td><code>/member link user account</code> · <code>/member unlink user</code></td><td>Vinculación manual de la cuenta de X.</td></tr>
+              </tbody>
           </table></div>
-          <h3>⚙️ Configuración (permiso “Gestionar servidor”)</h3>
+          <p>El bot usa inglés; el panel tiene selector Español / English. Accede al panel desde tu dominio de Railway.</p><p><code>/points like:2 repost:3 reply:5 quote:5 bonus:3</code> configura posts futuros. Usa <code>/task create url:… reply-points:10 bonus-points:5</code> para un solo post.</p><h3>⚙️ Configuración (permiso “Gestionar servidor”)</h3>
           <div class="tablewrap"><table>
             <thead><tr><th>Comando</th><th>Qué hace</th></tr></thead>
             <tbody>
-              <tr><td><code>/config ver</code></td><td>Muestra toda la configuración.</td></tr>
-              <tr><td><code>/config canal canal</code></td><td>Canal de tareas por defecto.</td></tr>
-              <tr><td><code>/config logs [canal]</code></td><td>Canal de registro y revisiones (vacío = desactivar).</td></tr>
-              <tr><td><code>/config rol-participantes [rol]</code></td><td>Rol que debe hacer las tareas.</td></tr>
-              <tr><td><code>/config rol-staff [rol]</code></td><td>Rol que puede gestionar tareas.</td></tr>
-              <tr><td><code>/config rol-mencion [rol]</code></td><td>Rol que se menciona al publicar.</td></tr>
-              <tr><td><code>/config verificacion modo</code></td><td>Declaración, captura obligatoria o revisión manual.</td></tr>
-              <tr><td><code>/config calidad minimo</code></td><td>Calidad mínima de los comentarios (0-100, recomendado 35).</td></tr>
-              <tr><td><code>/config recordatorios activar [minutos] [modo]</code></td><td>Recordatorios automáticos (canal, MD o ambos).</td></tr>
-              <tr><td><code>/config puntos [like] [repost] [comentario] [cita] [bonus]</code></td><td>Puntos por acción y bonus por completar.</td></tr>
-              <tr><td><code>/config duracion tiempo</code></td><td>Duración por defecto de las tareas.</td></tr>
+              <tr><td><code>/config view</code></td><td>Muestra toda la configuración.</td></tr>
+              <tr><td><code>/config channel channel</code></td><td>Canal de tareas por defecto.</td></tr>
+              <tr><td><code>/config logs [channel]</code></td><td>Canal de registro y revisiones (vacío = desactivar).</td></tr>
+              <tr><td><code>/config participant-role [role]</code></td><td>Rol que debe hacer las tareas.</td></tr>
+              <tr><td><code>/config staff-role [role]</code></td><td>Rol que puede gestionar tareas.</td></tr>
+              <tr><td><code>/config mention-role [role]</code></td><td>Rol que se menciona al publicar.</td></tr>
+              <tr><td><code>/config verification mode</code></td><td>Declaración, captura obligatoria o revisión manual.</td></tr>
+              <tr><td><code>/config quality minimum</code></td><td>Umbral de revisión de comentarios (0-100; 0 desactiva la revisión por calidad).</td></tr>
+              <tr><td><code>/config reminders enabled [minutes] [mode]</code></td><td>Recordatorios automáticos (canal, MD o ambos).</td></tr>
+              <tr><td><code>/config points [like] [repost] [reply] [quote] [bonus]</code></td><td>Puntos por acción y bonus por completar.</td></tr>
+              <tr><td><code>/config duration time</code></td><td>Duración por defecto de las tareas.</td></tr>
             </tbody>
           </table></div>
           <figure><img src="img/30-comandos.png" alt="Comandos del bot en Discord" loading="lazy" /><figcaption>Los comandos aparecen al escribir <code>/</code> en Discord (aquí, en el simulador).</figcaption></figure>
-          <div class="note info"><span>🔒</span><p><code>/config</code> sólo lo ven quienes tienen “Gestionar servidor”. Si quieres ocultar también <code>/tarea</code> y <code>/miembro</code> a los miembros, ve en Discord a <em>Ajustes del servidor › Integraciones › (tu bot)</em> y limita esos comandos a tu rol de staff.</p></div>
+          <div class="note info"><span>🔒</span><p><code>/config</code> sólo lo ven quienes tienen “Gestionar servidor”. Si quieres ocultar también <code>/task</code> y <code>/member</code> a los miembros, ve en Discord a <em>Ajustes del servidor › Integraciones › (tu bot)</em> y limita esos comandos a tu rol de staff.</p></div>
         </section>
 
         <!-- 12 -->
         <section id="inteligencia">
           <h2><span class="num">12.</span>Verificación inteligente y antifraude</h2>
           <h3>Calidad de los comentarios (0-100)</h3>
-          <p>Cada comentario se puntúa según su longitud, variedad de palabras, relación con el texto del post, estructura y uso de emojis, y se penaliza si es genérico (“gm”, “buen post”, “🔥🔥”), repetitivo, todo en mayúsculas o spam/autopromoción. Por debajo del mínimo (35 por defecto) se rechaza y se explica por qué. Puedes probarlo en <em>Ajustes › Prueba el analizador de calidad</em>.</p>
+          <p>Cada comentario recibe una valoración orientativa según su longitud, variedad de palabras, relación con el texto del post, estructura y uso de emojis. La valoración puede ser baja si es genérico (“gm”, “buen post”, “🔥🔥”), repetitivo, todo en mayúsculas o spam/autopromoción. Por debajo del umbral (35 por defecto), pasa a revisión del staff sin restar puntos, confianza ni intentos. La valoración es orientativa: el staff puede aprobar un comentario breve o con emojis. Puedes probarlo en <em>Ajustes › Prueba el analizador de calidad</em>.</p>
           <div class="tablewrap"><table>
             <thead><tr><th>Comentario</th><th>Calidad</th><th>Resultado</th></tr></thead>
             <tbody>
-              <tr><td>🔥🔥🔥</td><td>3</td><td><span class="badge warn">Rechazado</span></td></tr>
-              <tr><td>gm · Buen post · nice post bro</td><td>0-11</td><td><span class="badge warn">Rechazado</span></td></tr>
-              <tr><td>follow back bro check my bio</td><td>≤15</td><td><span class="badge warn">Rechazado (spam)</span></td></tr>
+              <tr><td>🔥🔥🔥</td><td>3</td><td><span class="badge warn">Revisión del staff</span></td></tr>
+              <tr><td>gm · Buen post · nice post bro</td><td>0-11</td><td><span class="badge warn">Revisión del staff</span></td></tr>
+              <tr><td>follow back bro check my bio</td><td>≤15</td><td><span class="badge warn">Revisión del staff</span></td></tr>
               <tr><td>Qué buena noticia para la ciencia</td><td>~66</td><td><span class="badge ok">Aceptado</span></td></tr>
               <tr><td>El próximo vuelo de Starship desde Starbase puede ser histórico, ojalá todo salga bien 🚀</td><td>~96</td><td><span class="badge ok">Excelente</span></td></tr>
             </tbody>
@@ -356,7 +355,7 @@ npm start                 # arranca el bot y el panel</code></pre>
           <h3>Modos de verificación de likes y reposts</h3>
           <div class="grid g3">
             <div class="card"><h4>⚡ Declaración</h4><p>Cuenta al pulsar “Ya lo hice”. El más rápido. Se vigila con la auditoría de contadores. Recomendado para comunidades de confianza.</p></div>
-            <div class="card"><h4>📸 Captura</h4><p>Hay que subir una captura con <code>/prueba</code>. Se aprueba sola con confianza alta; si no, la revisa el staff.</p></div>
+            <div class="card"><h4>📸 Captura</h4><p>Hay que subir una captura con <code>/proof</code>. Se aprueba sola con confianza alta; si no, la revisa el staff.</p></div>
             <div class="card"><h4>🛡️ Revisión</h4><p>Cada declaración espera a que el staff la apruebe. El más estricto.</p></div>
           </div>
           <p>En los tres modos, el repost se comprueba primero en el perfil público: si aparece, cuenta como comprobado sin más trámites.</p>
@@ -448,7 +447,7 @@ WantedBy=multi-user.target</code></pre>
           <div class="tablewrap"><table>
             <thead><tr><th>Comando</th><th>Qué comprueba</th><th>Resultado</th></tr></thead>
             <tbody>
-              <tr><td><code>npm test</code></td><td>66 pruebas: utilidades, análisis de enlaces, calidad y antiplagio, proveedores de X con respuestas reales guardadas, el motor completo (vinculación, cada tipo de verificación, puntos, cierre, recordatorios, antifraude), <strong>todos los comandos, botones y formularios</strong> en el Discord simulado, límites de mensajes de Discord con datos extremos, el adaptador de discord.js y el panel web (seguridad, CSRF, permisos, cada endpoint, eventos en vivo, OAuth2).</td><td><span class="badge ok">66/66</span></td></tr>
+              <tr><td><code>npm test</code></td><td>78 pruebas: utilidades, análisis de enlaces, calidad y antiplagio, proveedores de X con respuestas reales guardadas, el motor completo (vinculación, cada tipo de verificación, puntos, cierre, recordatorios, antifraude), <strong>todos los comandos, botones y formularios</strong> en el Discord simulado, límites de mensajes de Discord con datos extremos, el adaptador de discord.js y el panel web (seguridad, CSRF, permisos, cada endpoint, eventos en vivo, OAuth2).</td><td><span class="badge ok">78/78</span></td></tr>
               <tr><td><code>npm run test:live</code></td><td>Contra X real: lee posts y perfiles y <strong>verifica de extremo a extremo una respuesta pública real</strong>, rechazando los intentos de usarla desde otra cuenta.</td><td><span class="badge ok">OK</span></td></tr>
               <tr><td><code>npm run soak</code></td><td>Miles de interacciones seguidas (13 320 en la prueba) midiendo la memoria tras cada ronda.</td><td><span class="badge ok">Sin fugas</span> ~23,5 MB estables</td></tr>
               <tr><td><code>npm run capturas</code></td><td>Recorrido visual con un navegador real: usa el panel y el simulador como una persona (clics, formularios, comandos) y falla ante cualquier error de consola. Genera las imágenes de esta guía.</td><td><span class="badge ok">0 errores</span></td></tr>
@@ -465,7 +464,7 @@ WantedBy=multi-user.target</code></pre>
           <details><summary>“No pude publicar la tarea en el canal…”</summary><p>El bot necesita en ese canal: Ver canal, Enviar mensajes e Insertar enlaces. El mensaje de error dice exactamente cuál falta. En el panel, los canales sin permisos aparecen como “(sin permisos)”.</p></details>
           <details><summary>“No encontramos el código en tu biografía”</summary><p>Guarda la biografía en X y espera 1-2 minutos: las fuentes públicas de X pueden tardar en mostrar el cambio. Alternativa: “Publicar el código” en un post y “Verificar con post”.</p></details>
           <details><summary>“X no respondió a tiempo”</summary><p>Una fuente de X estaba lenta o pidió esperar. El intento <strong>no se gasta</strong>: vuelve a pulsar ✅ en un minuto. Revisa <em>Estado del bot › Fuentes de X</em>. <code>npm run doctor</code> comprueba si tu red bloquea <code>api.fxtwitter.com</code> o <code>cdn.syndication.twimg.com</code>.</p></details>
-          <details><summary>El informe dice “miembros con X vinculada” en vez del rol</summary><p>Falta el intent <em>SERVER MEMBERS INTENT</em> (paso 4.3) o la tarea no tiene rol de participantes. Actívalo en el portal y reinicia; el panel muestra un aviso mientras falte.</p></details>
+          <details><summary>El informe dice “miembros con X vinculada” en vez del rol</summary><p>Falta el intent <em>SERVER MEMBERS INTENT</em> (paso 4.3) o la tarea no tiene rol de participantes. Actívalo para el ID de aplicación que aparece en Estado del bot. El bot vuelve a comprobarlo cada minuto y reconecta automáticamente; también puedes pulsar Comprobar intent.</p></details>
           <details><summary>El puerto 3000 está ocupado</summary><p>Cambia <code>DASHBOARD_PORT</code> en <code>.env</code> (y <code>PUBLIC_URL</code> para que coincida).</p></details>
           <details><summary>Olvidé la contraseña del panel</summary><p>Mírala en <code>data/admin-password.txt</code> o define una nueva en <code>DASHBOARD_PASSWORD</code> y reinicia. En <em>Estado del bot</em> puedes cerrar todas las sesiones abiertas.</p></details>
           <details><summary>El repost no aparece como “comprobado”</summary><p>X no siempre muestra los reposts recientes en el perfil público, o limita esa consulta. Entonces se aplica el modo de verificación del servidor (declaración, captura o revisión). No es un error.</p></details>
