@@ -1,0 +1,178 @@
+{
+ "__typename": "Tweet",
+ "favorite_count": 72686,
+ "lang": "en",
+ "possibly_sensitive": false,
+ "created_at": "2026-09-25T17:29:27.000Z",
+ "display_text_range": [
+  0,
+  39
+ ],
+ "entities": {
+  "media": [
+   {
+    "display_url": "pic.x.com/YTgVhc9PY5",
+    "expanded_url": "https://x.com/elonmusk/status/2103537377239015827/photo/1",
+    "indices": [
+     40,
+     63
+    ],
+    "url": "https://t.co/YTgVhc9PY5"
+   }
+  ]
+ },
+ "id_str": "2103537377239015827",
+ "text": "May Starship have the Mandate of Heaven https://t.co/YTgVhc9PY5",
+ "user": {
+  "id_str": "44196397",
+  "name": "Elon Musk",
+  "screen_name": "elonmusk",
+  "is_blue_verified": true,
+  "profile_image_shape": "Circle",
+  "verified": false,
+  "profile_image_url_https": "https://pbs.twimg.com/profile_images/2103567689515954176/aR-Kjpp4_normal.jpg",
+  "highlighted_label": {
+   "badge": {
+    "url": "https://pbs.twimg.com/profile_images/1955359038532653056/OSHY3ewP_bigger.jpg"
+   },
+   "description": "X",
+   "url": {
+    "url": "https://twitter.com/X",
+    "url_type": "DeepLink"
+   },
+   "user_label_display_type": "Badge",
+   "user_label_type": "BusinessLabel"
+  }
+ },
+ "edit_control": {
+  "edit_tweet_ids": [
+   "2103537377239015827"
+  ],
+  "editable_until_msecs": "1790360967000",
+  "edits_remaining": "5",
+  "is_edit_eligible": false
+ },
+ "mediaDetails": [
+  {
+   "display_url": "pic.x.com/YTgVhc9PY5",
+   "expanded_url": "https://x.com/elonmusk/status/2103537377239015827/photo/1",
+   "ext_media_availability": {
+    "status": "Available"
+   },
+   "indices": [
+    40,
+    63
+   ],
+   "media_url_https": "https://pbs.twimg.com/media/HTFEGJKWMAAcwKR.jpg",
+   "original_info": {
+    "focus_rects": [
+     {
+      "h": 1147,
+      "w": 2048,
+      "x": 0,
+      "y": 0
+     },
+     {
+      "h": 1177,
+      "w": 1177,
+      "x": 281,
+      "y": 0
+     },
+     {
+      "h": 1177,
+      "w": 1032,
+      "x": 353,
+      "y": 0
+     },
+     {
+      "h": 1177,
+      "w": 589,
+      "x": 575,
+      "y": 0
+     },
+     {
+      "h": 1177,
+      "w": 2048,
+      "x": 0,
+      "y": 0
+     }
+    ],
+    "height": 1177,
+    "width": 2048
+   },
+   "sizes": {
+    "large": {
+     "h": 1177,
+     "resize": "fit",
+     "w": 2048
+    },
+    "medium": {
+     "h": 690,
+     "resize": "fit",
+     "w": 1200
+    },
+    "small": {
+     "h": 391,
+     "resize": "fit",
+     "w": 680
+    },
+    "thumb": {
+     "h": 150,
+     "resize": "crop",
+     "w": 150
+    }
+   },
+   "type": "photo",
+   "url": "https://t.co/YTgVhc9PY5"
+  }
+ ],
+ "photos": [
+  {
+   "backgroundColor": {
+    "red": 204,
+    "green": 214,
+    "blue": 221
+   },
+   "cropCandidates": [
+    {
+     "h": 1147,
+     "w": 2048,
+     "x": 0,
+     "y": 0
+    },
+    {
+     "h": 1177,
+     "w": 1177,
+     "x": 281,
+     "y": 0
+    },
+    {
+     "h": 1177,
+     "w": 1032,
+     "x": 353,
+     "y": 0
+    },
+    {
+     "h": 1177,
+     "w": 589,
+     "x": 575,
+     "y": 0
+    },
+    {
+     "h": 1177,
+     "w": 2048,
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "expandedUrl": "https://x.com/elonmusk/status/2103537377239015827/photo/1",
+   "url": "https://pbs.twimg.com/media/HTFEGJKWMAAcwKR.jpg",
+   "width": 2048,
+   "height": 1177
+  }
+ ],
+ "conversation_count": 5165,
+ "news_action_type": "conversation",
+ "isEdited": false,
+ "isStaleEdit": false
+}

@@ -1,0 +1,130 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/elonmusk/status/2103537377239015827",
+  "id": "2103537377239015827",
+  "text": "May Starship have the Mandate of Heaven",
+  "raw_text": {
+   "text": "May Starship have the Mandate of Heaven https://t.co/YTgVhc9PY5",
+   "display_text_range": [
+    0,
+    39
+   ],
+   "facets": [
+    {
+     "type": "media",
+     "indices": [
+      40,
+      63
+     ],
+     "id": "2103537373287952384",
+     "display": "pic.x.com/YTgVhc9PY5",
+     "original": "https://t.co/YTgVhc9PY5",
+     "replacement": "https://x.com/elonmusk/status/2103537377239015827/photo/1"
+    }
+   ]
+  },
+  "author": {
+   "screen_name": "elonmusk",
+   "url": "https://x.com/elonmusk",
+   "id": "44196397",
+   "followers": 241695180,
+   "following": 1411,
+   "likes": 249510,
+   "media_count": 4724,
+   "statuses": 109083,
+   "name": "Elon Musk",
+   "description": "http://Terafab.AI",
+   "location": "",
+   "banner_url": "https://pbs.twimg.com/profile_banners/44196397/1774145451",
+   "avatar_url": "https://pbs.twimg.com/profile_images/2103567689515954176/aR-Kjpp4_200x200.jpg",
+   "joined": "Tue Jun 02 20:12:29 +0000 2009",
+   "protected": false,
+   "website": null,
+   "verification": {
+    "verified": true,
+    "verified_at": null,
+    "type": "individual"
+   },
+   "type": "profile"
+  },
+  "replies": 5165,
+  "reposts": 6510,
+  "likes": 72686,
+  "bookmarks": 2621,
+  "quotes": 904,
+  "embed_card": "summary_large_image",
+  "created_at": "Fri Sep 25 17:29:27 +0000 2026",
+  "created_timestamp": 1790357367,
+  "possibly_sensitive": false,
+  "views": 5689749,
+  "is_note_tweet": false,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": null,
+  "media": {
+   "all": [
+    {
+     "type": "photo",
+     "id": "2103537373287952384",
+     "url": "https://pbs.twimg.com/media/HTFEGJKWMAAcwKR.jpg?name=orig",
+     "width": 2048,
+     "height": 1177
+    }
+   ],
+   "photos": [
+    {
+     "type": "photo",
+     "id": "2103537373287952384",
+     "url": "https://pbs.twimg.com/media/HTFEGJKWMAAcwKR.jpg?name=orig",
+     "width": 2048,
+     "height": 1177
+    }
+   ]
+  },
+  "source": "Twitter for iPhone",
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "author": {
+  "screen_name": "elonmusk",
+  "url": "https://x.com/elonmusk",
+  "id": "44196397",
+  "followers": 241695180,
+  "following": 1411,
+  "likes": 249510,
+  "media_count": 4724,
+  "statuses": 109083,
+  "name": "Elon Musk",
+  "description": "http://Terafab.AI",
+  "raw_description": {
+   "text": "https://t.co/ZdBx5WABYx",
+   "facets": [
+    {
+     "type": "url",
+     "indices": [
+      0,
+      23
+     ],
+     "original": "https://t.co/ZdBx5WABYx",
+     "replacement": "http://Terafab.AI",
+     "display": "Terafab.AI"
+    }
+   ]
+  },
+  "location": "",
+  "banner_url": "https://pbs.twimg.com/profile_banners/44196397/1774145451",
+  "avatar_url": "https://pbs.twimg.com/profile_images/2103567689515954176/aR-Kjpp4_200x200.jpg",
+  "joined": "Tue Jun 02 20:12:29 +0000 2009",
+  "protected": false,
+  "website": null,
+  "verification": {
+   "verified": true,
+   "verified_at": null,
+   "type": "individual"
+  },
+  "type": "profile"
+ },
+ "code": 200
+}

@@ -1,0 +1,99 @@
+{
+ "__typename": "Tweet",
+ "favorite_count": 2518,
+ "in_reply_to_screen_name": "XDevelopers",
+ "in_reply_to_status_id_str": "1623467617037221889",
+ "in_reply_to_user_id_str": "2244994945",
+ "lang": "en",
+ "created_at": "2023-02-08T23:43:37.000Z",
+ "display_text_range": [
+  0,
+  221
+ ],
+ "entities": {},
+ "id_str": "1623467618400374784",
+ "text": "A new form of free access will be introduced as this is extremely important to our ecosystem – limited to Tweet creation of up to 1,500 Tweets per month for a single authenticated user token, including Login with Twitter.",
+ "user": {
+  "id_str": "2244994945",
+  "name": "Developers",
+  "screen_name": "XDevelopers",
+  "is_blue_verified": true,
+  "profile_image_shape": "Square",
+  "verified": false,
+  "verified_type": "Business",
+  "profile_image_url_https": "https://pbs.twimg.com/profile_images/1683501992314798080/xl1POYLw_normal.jpg",
+  "highlighted_label": {
+   "badge": {
+    "url": "https://pbs.twimg.com/profile_images/1955359038532653056/OSHY3ewP_bigger.jpg"
+   },
+   "description": "X",
+   "url": {
+    "url": "https://twitter.com/X",
+    "url_type": "DeepLink"
+   },
+   "user_label_display_type": "Badge",
+   "user_label_type": "BusinessLabel"
+  }
+ },
+ "edit_control": {
+  "edit_tweet_ids": [
+   "1623467618400374784"
+  ],
+  "editable_until_msecs": "1675901617000",
+  "edits_remaining": "5",
+  "is_edit_eligible": false
+ },
+ "conversation_count": 682,
+ "news_action_type": "conversation",
+ "parent": {
+  "favorite_count": 619,
+  "in_reply_to_screen_name": "XDevelopers",
+  "in_reply_to_status_id_str": "1623467615539859456",
+  "in_reply_to_user_id_str": "2244994945",
+  "lang": "en",
+  "reply_count": 183,
+  "retweet_count": 713,
+  "created_at": "2023-02-08T23:43:37.000Z",
+  "display_text_range": [
+   0,
+   99
+  ],
+  "entities": {},
+  "id_str": "1623467617037221889",
+  "text": "Paid basic access that offers low level of API usage, and access to Ads API for a $100 monthly fee.",
+  "user": {
+   "id_str": "2244994945",
+   "name": "Developers",
+   "screen_name": "XDevelopers",
+   "is_blue_verified": true,
+   "profile_image_shape": "Square",
+   "verified": false,
+   "verified_type": "Business",
+   "profile_image_url_https": "https://pbs.twimg.com/profile_images/1683501992314798080/xl1POYLw_normal.jpg",
+   "highlighted_label": {
+    "badge": {
+     "url": "https://pbs.twimg.com/profile_images/1955359038532653056/OSHY3ewP_bigger.jpg"
+    },
+    "description": "X",
+    "url": {
+     "url": "https://twitter.com/X",
+     "url_type": "DeepLink"
+    },
+    "user_label_display_type": "Badge",
+    "user_label_type": "BusinessLabel"
+   }
+  },
+  "edit_control": {
+   "edit_tweet_ids": [
+    "1623467617037221889"
+   ],
+   "editable_until_msecs": "1675901617000",
+   "edits_remaining": "5",
+   "is_edit_eligible": false
+  },
+  "isEdited": false,
+  "isStaleEdit": false
+ },
+ "isEdited": false,
+ "isStaleEdit": false
+}

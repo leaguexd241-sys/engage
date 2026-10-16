@@ -1,0 +1,98 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/XDevelopers/status/1623467618400374784",
+  "id": "1623467618400374784",
+  "text": "A new form of free access will be introduced as this is extremely important to our ecosystem – limited to Tweet creation of up to 1,500 Tweets per month for a single authenticated user token, including Login with Twitter.",
+  "raw_text": {
+   "text": "A new form of free access will be introduced as this is extremely important to our ecosystem – limited to Tweet creation of up to 1,500 Tweets per month for a single authenticated user token, including Login with Twitter.",
+   "display_text_range": [
+    0,
+    221
+   ],
+   "facets": []
+  },
+  "author": {
+   "screen_name": "XDevelopers",
+   "url": "https://x.com/XDevelopers",
+   "id": "2244994945",
+   "followers": 698339,
+   "following": 768,
+   "likes": 2725,
+   "media_count": 831,
+   "statuses": 4361,
+   "name": "Developers",
+   "description": "The voice of the X Dev team and your official source for updates, news, and events, related to the X API.",
+   "location": "127.0.0.1",
+   "banner_url": "https://pbs.twimg.com/profile_banners/2244994945/1690213128",
+   "avatar_url": "https://pbs.twimg.com/profile_images/1683501992314798080/xl1POYLw_200x200.jpg",
+   "joined": "Sat Dec 14 04:35:55 +0000 2013",
+   "protected": false,
+   "website": {
+    "url": "https://docs.x.com/",
+    "display_url": "docs.x.com"
+   },
+   "verification": {
+    "verified": true,
+    "verified_at": null,
+    "type": "organization"
+   },
+   "type": "profile"
+  },
+  "replies": 682,
+  "reposts": 2761,
+  "likes": 2518,
+  "bookmarks": 448,
+  "quotes": 13562,
+  "embed_card": "tweet",
+  "created_at": "Wed Feb 08 23:43:37 +0000 2023",
+  "created_timestamp": 1675899817,
+  "views": 11450492,
+  "is_note_tweet": false,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": {
+   "screen_name": "XDevelopers",
+   "status": "1623467617037221889",
+   "url": "https://x.com/XDevelopers/status/1623467617037221889",
+   "profile_url": "https://x.com/XDevelopers"
+  },
+  "media": {},
+  "source": "Twitter Web App",
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "author": {
+  "screen_name": "XDevelopers",
+  "url": "https://x.com/XDevelopers",
+  "id": "2244994945",
+  "followers": 698339,
+  "following": 768,
+  "likes": 2725,
+  "media_count": 831,
+  "statuses": 4361,
+  "name": "Developers",
+  "description": "The voice of the X Dev team and your official source for updates, news, and events, related to the X API.",
+  "raw_description": {
+   "text": "The voice of the X Dev team and your official source for updates, news, and events, related to the X API.",
+   "facets": []
+  },
+  "location": "127.0.0.1",
+  "banner_url": "https://pbs.twimg.com/profile_banners/2244994945/1690213128",
+  "avatar_url": "https://pbs.twimg.com/profile_images/1683501992314798080/xl1POYLw_200x200.jpg",
+  "joined": "Sat Dec 14 04:35:55 +0000 2013",
+  "protected": false,
+  "website": {
+   "url": "https://docs.x.com/",
+   "display_url": "docs.x.com"
+  },
+  "verification": {
+   "verified": true,
+   "verified_at": null,
+   "type": "organization"
+  },
+  "type": "profile"
+ },
+ "code": 200
+}
